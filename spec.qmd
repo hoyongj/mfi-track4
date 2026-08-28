@@ -1,0 +1,519 @@
+---
+title: "Deductible versus Coinsurance under an ADAS Loss Profile"
+subtitle: "Track 4 project specification, MFI Refresher Group Presentation"
+author:
+  - name: "Hoyong Jung"
+    email: hoyong.jung@mail.utoronto.ca
+  - name: "Daren Wang"
+    email: daren.wang@mail.utoronto.ca
+  - name: "Yufei (Faye) Wang"
+    email: fayeee.wang@mail.utoronto.ca
+  - name: "Qiwei Ye"
+    email: qiwei.ye@mail.utoronto.ca
+  - name: "Xiaoxiao Fan"
+    email: xiaoxiao.fan@mail.utoronto.ca
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    theme: cosmo
+    code-fold: show
+    df-print: kable
+execute:
+  eval: false
+  echo: true
+  warning: false
+---
+
+## Purpose of this document
+
+This is a working specification, not a report. It fixes the decisions that everyone
+else's work depends on, so that five people can work in parallel without waiting on
+each other.
+
+Anything marked **fixed** should be treated as settled unless someone raises a
+substantive objection. Anything marked **open** is genuinely undecided and needs an
+owner.
+
+Presentation date: **9 September 2026, 18:00 EST**, first STA 2550 class.
+
+---
+
+## Central question {#sec-question}
+
+> **Fewer accidents but more expensive repairs. For an insurer facing that loss
+> profile, is a higher deductible or a lower deductible with coinsurance the better
+> contract design?**
+
+Status: **fixed**.
+
+Two things are worth saying about the shape of this question.
+
+First, it is a *decision* question, not a survey question. The brief is explicit that
+a presentation should investigate a decision or problem rather than survey a topic.
+We compare exactly two contract designs and defend a choice between them.
+
+Second, the automation angle is the *motivation*, not the subject. We are not
+building a model of self-driving cars. We are taking a real, documented shift in the
+loss profile of vehicles equipped with driver assistance systems, and asking what it
+implies for contract design. That distinction keeps the scope inside what we can
+defend.
+
+### Modules connected
+
+| Module | Role |
+|---|---|
+| P&C insurance | Primary. Compound frequency-severity model, loss transformation, tail measures, truncation and censoring. |
+| Programming fundamentals | Implementation. Reproducible pipeline, functions, Monte Carlo simulation, this document itself. |
+
+The brief allows programming to serve as the implementation layer rather than a
+separate theoretical subject. It still has to be substantive, which is why the
+pipeline is written as functions in a versioned repository rather than as a notebook
+that only one person can run.
+
+---
+
+## Dataset decision {#sec-data}
+
+Status: **fixed**.
+
+Qiwei prepared a six-dataset public inventory on 21 August, scoring each candidate
+against eighteen variable categories required or useful for this simulation. That
+inventory drives the decision below, and it should be credited on the reference
+slide.
+
+| Dataset | Coverage | Size | Score |
+|---|---|---|---|
+| **CAS Pricing Game 2016 (`pricingame`)** | French private motor, material damage | 87,228 policies + 4,568 claims | **12/18** |
+| Spanish actual motor portfolio 2015-2018 | Motor, aggregated by policy period | 105,555 policy-period rows | 11/18 |
+| Spanish coverage-specific portfolio 2022-2024 | Motor, coverage level | 354,140 policy-years | 11/18 |
+| Brazilian `brvehins1` | Vehicle insurance, aggregated | 1,965,355 records | 7/18 |
+| freMTPL2 | Motor third-party liability | 677,991 policies + 26,444 claims | 6/18 |
+| Guillen-Bolance-Frees-Valdez five-year panel | Motor and home, annual aggregates | 122,935 customer-years | 6/18 |
+
+### Selection: `pg16trainpol` and `pg16trainclaim`
+
+We use the 2016 Pricing Game tables from the `CASdatasets` package. Three reasons.
+
+**Highest coverage of the variables we need**, at 12 of 18. It is the only candidate
+that carries deductible and sum-insured information alongside claim-level amounts,
+which lets us check that our chosen contract terms sit in a plausible range rather
+than being invented.
+
+**Material damage only, bodily injury excluded.** This matters more than the score.
+Our question is about repair costs. A severity distribution that mixes vehicle damage
+with bodily injury is a mixture of two very different processes, and fitting a single
+parametric family to it would be hard to defend. Excluding injury gives us a cleaner
+repair-cost distribution.
+
+**Claim-level amounts, not aggregates.** Four of the six candidates report losses
+aggregated over a policy period or a year. We need individual claim amounts to fit a
+severity distribution and to apply a per-claim deductible.
+
+### Why not freMTPL2
+
+It was the initial suggestion and it is wrong for this question. It is the best-known
+teaching dataset in this area, which is exactly why it was suggested, but familiarity
+is not fitness. Third-party liability severities include bodily injury, and the public
+files carry no deductible or limit information at all. Qiwei's inventory caught this;
+we are following the evidence rather than the default.
+
+### Loading
+
+```{r}
+#| label: load-data
+install.packages("CASdatasets", repos = "http://cas.uqam.ca/pub/R/", type = "source")
+
+library(CASdatasets)
+data(pricingame)
+
+pol   <- pg16trainpol    # 87,228 policies, exposure and risk characteristics
+claim <- pg16trainclaim  # 4,568 claims, individual amounts
+
+str(pol)
+str(claim)
+```
+
+Two practical notes for whoever handles the data. Most categorical levels are
+anonymised for confidentiality, so they carry no interpretable meaning and should not
+be used to tell a story about driver or vehicle type. And the join between the two
+tables is on the policy identifier, so policies with no claim will not appear in the
+claim table at all.
+
+---
+
+## The ground-up gap {#sec-gu}
+
+Status: **fixed as a limitation**. This is the most important assumption in the
+project and it belongs on a slide.
+
+Qiwei's matrix has a column labelled GU: verified ground-up repair cost, before any
+deductible, coinsurance or limit is applied.
+
+**That column is zero for all six candidates.** No public dataset in the inventory
+publishes a verified ground-up loss.
+
+This is not a reason to keep searching. It is a structural property of insurance data.
+An insurer only observes losses that were reported to it, and a policyholder has no
+reason to report a loss smaller than their deductible. The data are therefore already
+**left-truncated** at an unknown threshold, and any distribution fitted to them is a
+conditional distribution dressed up as an unconditional one.
+
+The consequence for us is specific and quantifiable:
+
+- Fitting a severity distribution to observed claims and treating it as ground-up
+  **understates the true frequency** of small losses.
+- That in turn **overstates the cost** of the low-deductible design, because the small
+  losses that a low deductible would newly pick up are missing from the data.
+- The bias therefore runs in a known direction, and it favours the high-deductible
+  design.
+
+Stating the direction of the bias is much stronger than stating that a bias exists.
+It also answers one of the questions every student is told to be ready for: what
+information is missing, censored, or aggregated.
+
+The Track 4 brief lists discussion of censoring and truncation as required evidence.
+So the gap Qiwei found is not an obstacle to the project. It is one of the deliverables.
+
+---
+
+## Model specification {#sec-model}
+
+Status: **fixed**, subject to the diagnostics below coming out as expected.
+
+We use a collective risk model. For a portfolio over one year,
+
+$$S = \sum_{i=1}^{N} X_i$$
+
+where $N$ is the number of claims, $X_i$ are individual ground-up loss amounts, and
+$N$ and $X_i$ are assumed independent.
+
+### Frequency
+
+**Negative binomial**, with Poisson fitted alongside as a diagnostic.
+
+The rationale is overdispersion. A Poisson model forces the variance to equal the
+mean, and motor claim counts almost always show a variance above the mean because
+policyholders are not identical. The negative binomial arises naturally as a Poisson
+mixture over unobserved heterogeneity, which is the right story here given that the
+risk characteristics in this dataset are anonymised and cannot fully explain that
+heterogeneity.
+
+Fit both, report the dispersion statistic, and keep Poisson in the appendix. If the
+data turn out not to be overdispersed, we use Poisson and say so.
+
+Exposure enters as an offset, since policies are observed for varying fractions of a
+year.
+
+### Severity
+
+**Lognormal and gamma, choose by fit.**
+
+Both are standard for positive, right-skewed loss amounts. Lognormal has the heavier
+right tail of the two, which matters for a question about tail risk. Select by AIC
+supported by a QQ plot, and show the QQ plot rather than only the AIC number, because
+a number is not interpretable and a plot is.
+
+We do **not** use a Pareto-type severity. It would be defensible, but with 4,568
+claims the tail index would be poorly estimated, and the brief is explicit that a
+simple analysis that is correctly understood beats a complex one that cannot be
+defended.
+
+### What we are not doing
+
+No GLM with covariates. No machine learning. No traffic simulation. No correlated or
+common-shock structure between claims. Each of these was considered and dropped for
+scope; if asked, the answer is that the brief limits us to one main dataset and two
+principal methods, and that the question does not require them.
+
+```{r}
+#| label: fit
+library(fitdistrplus)
+library(MASS)
+
+# Frequency
+fit_pois <- glm(ClaimNb ~ 1, offset = log(Exposure), family = poisson,       data = pol)
+fit_nb   <- glm.nb(ClaimNb ~ 1 + offset(log(Exposure)),                      data = pol)
+
+# Severity
+fit_ln <- fitdist(claim$ClaimAmount, "lnorm")
+fit_ga <- fitdist(claim$ClaimAmount, "gamma")
+
+gofstat(list(fit_ln, fit_ga))
+```
+
+---
+
+## Scenario multipliers {#sec-scenario}
+
+Status: **fixed for the baseline, sensitivity grid open**.
+
+We do not invent the frequency and severity shift. It comes from published insurance
+loss data, which is what makes this project defensible rather than a parameter
+guessing exercise.
+
+The Highway Loss Data Institute compared 2017-22 model year vehicles with and without
+a bundle of driver assistance features, holding the vehicle model otherwise constant.
+Matt Moore of IIHS-HLDI published the comparison on 11 August 2026. The findings:
+
+| Quantity | Effect for equipped vehicles |
+|---|---|
+| Collision claim severity | about **10% higher** |
+| Collision claim frequency | about **10% lower** |
+| Property damage liability claim frequency | about **40% lower** |
+| Overall collision losses | about **5% lower** |
+
+The mechanism is that sensors are expensive to replace and usually require
+calibration afterwards, but equipped vehicles are in fewer crashes to begin with.
+
+### Baseline scenario
+
+Our data are third-party material damage, so the property damage liability figures are
+the closer match.
+
+- Frequency multiplier $\phi_N = 0.60$
+- Severity multiplier $\phi_X = 1.10$
+
+Applied as: $\lambda_{AV} = \phi_N \lambda$, and severity scaled by $\phi_X$ on the
+mean while holding the coefficient of variation constant.
+
+### Sensitivity grid
+
+Run the full model over $\phi_N \in [0.5, 1.0]$ and $\phi_X \in [1.0, 1.3]$ and
+present a contour of the result. This is the single most valuable slide in the deck,
+because it converts our biggest weakness, dependence on assumed parameters, into the
+subject of the analysis.
+
+### Known weakness in this mapping
+
+**Open**, and someone should own writing two sentences on it.
+
+Property damage liability pays for damage to the *other* party's vehicle. Driver
+assistance on the insured vehicle reduces the frequency of causing such damage, but
+the severity of the repair applies to a third-party vehicle that may not be equipped.
+Applying a severity uplift derived from collision coverage to a liability portfolio is
+therefore an approximation. It is a reasonable one if the vehicle fleet as a whole is
+becoming equipped, which is the scenario we are describing, but it should be stated
+rather than hidden.
+
+---
+
+## Contract designs {#sec-contracts}
+
+Status: **fixed in structure, parameters open pending calibration**.
+
+Insurer payment on a ground-up loss $X$:
+
+$$Y = \min\big(\alpha (X - d)_+,\; L\big)$$
+
+where $d$ is the deductible, $\alpha$ the insurer's share above the deductible, and
+$L$ the per-claim limit.
+
+| | Design A: high deductible | Design B: coinsurance |
+|---|---|---|
+| Deductible $d$ | 1,000 | 250 |
+| Insurer share $\alpha$ | 1.00 | 0.80 |
+| Per-claim limit $L$ | same | same |
+
+### The calibration that makes the comparison fair
+
+**Calibrate the two designs to approximately equal expected insurer cost at baseline,
+then compare their tail behaviour and their effect on the policyholder.**
+
+Without this step the comparison is trivial and the presentation is weak: of course a
+higher deductible costs the insurer less. Holding expected cost equal turns the
+question into something that actually has an answer worth defending, which is how the
+two designs distribute risk rather than how much they cost on average.
+
+Tune $d$ in Design A, or $\alpha$ in Design B, until expected aggregate cost matches
+within a small tolerance. Report the calibrated values and the tolerance achieved.
+
+```{r}
+#| label: payment
+insurer_payment <- function(x, d, alpha, limit) {
+  pmin(alpha * pmax(x - d, 0), limit)
+}
+
+simulate_aggregate <- function(n_sims, lambda, size, sev_par, d, alpha, limit) {
+  vapply(seq_len(n_sims), function(i) {
+    n <- rnbinom(1, mu = lambda, size = size)
+    if (n == 0) return(0)
+    x <- rlnorm(n, sev_par$meanlog, sev_par$sdlog)
+    sum(insurer_payment(x, d, alpha, limit))
+  }, numeric(1))
+}
+```
+
+Use at least 100,000 simulations, set a seed, and report the Monte Carlo standard
+error on the tail measures. A tail estimate quoted without its own uncertainty invites
+an obvious question.
+
+---
+
+## Required outputs {#sec-outputs}
+
+Status: **fixed**. Every item below appears either on a slide or in the appendix.
+
+**Aggregate loss distribution**, both designs, both baseline and shifted scenarios:
+
+- Expected aggregate insurer cost, $E[S]$
+- Standard deviation
+- VaR at 95% and 99%
+- **TVaR at 99%** (the headline tail measure)
+
+**Policyholder side:**
+
+- Expected retained loss per policyholder, $E[X - Y]$
+- Retention as a share of ground-up loss
+
+**Truncation and censoring diagnostics** (required by the Track 4 brief):
+
+- Share of claims falling entirely below the deductible under each design
+- Share of claims hitting the limit
+- How each design changes what the insurer would observe in future data
+
+**Sensitivity:**
+
+- Contour of the design preference over the $(\phi_N, \phi_X)$ grid
+
+Keep every figure legible from the back of a room. Two well-labelled charts beat six
+crowded ones, and the deck is capped at 20 slides including cover and figures.
+
+---
+
+## Section ownership {#sec-owners}
+
+Five sections in the brief, five of us. Each person owns their section and presents
+it, two to four minutes each, no more than four slides each excluding the cover.
+
+| # | Section | Owner | Depends on |
+|---|---|---|---|
+| 1 | Problem and decision | **open** | nothing, can start now |
+| 2 | Key concepts | Hoyong Jung | nothing, can start now |
+| 3 | Analysis and evidence | Qiwei Ye | @sec-data, @sec-model |
+| 4 | Comparison and judgment | Daren Wang | section 3 outputs |
+| 5 | Conclusion and limitations | Xiaoxiao Fan | @sec-gu, @sec-scenario |
+
+Section 1 is unclaimed. Faye, it is yours if you want it, and it is the section with
+the fewest dependencies.
+
+### A note for sections 4 and 5
+
+Both are downstream of the simulation, which creates a scheduling risk: if you wait
+for section 3 to finish, you compress into the final days.
+
+Neither of you actually needs to wait.
+
+**Section 4** can be written against the *structure* of the result rather than the
+numbers. The comparison logic, which measures matter and why, and what would make each
+design preferable is all fixed by @sec-contracts. Draft it with placeholder numbers.
+
+**Section 5** can be drafted almost entirely from this document today. The limitations
+register below is the raw material, and it will not change when the simulation
+finishes.
+
+### One open role
+
+**Slide template owner: open.** The brief requires the template to be consistent
+across all slides. Five people building slides independently produces five decks and
+a bad evening on 8 September. Whoever takes this should push a template to the repo
+before anyone starts making slides.
+
+---
+
+## Limitations register {#sec-limitations}
+
+Raw material for section 5. Roughly in order of how badly each one would hurt if a
+question landed on it.
+
+1. **No ground-up losses.** No public dataset publishes verified ground-up repair
+   cost. Observed claims are left-truncated at an unknown reporting threshold, so the
+   fitted severity is conditional, small losses are undercounted, and the bias favours
+   the high-deductible design. See @sec-gu.
+
+2. **Coverage mismatch in the scenario.** Frequency and severity multipliers come from
+   US collision and property damage liability experience; the data are French
+   third-party material damage. Both the country and the coverage differ. See
+   @sec-scenario.
+
+3. **Driver assistance is not full automation.** HLDI measures vehicles with
+   assistance bundles, not autonomous vehicles. We use it as the best available
+   observed evidence for the direction and rough size of the shift, not as a
+   measurement of automation.
+
+4. **Independence assumed.** Claims are treated as independent. Vehicles sharing
+   software or sensor hardware plausibly have correlated failure modes, which would
+   fatten the aggregate tail beyond what we report. Our tail measures are therefore
+   likely optimistic. We did not model this; it is the obvious next step.
+
+5. **Anonymised categorical levels.** Risk characteristics in this dataset have no
+   published meaning, so we cannot segment or interpret by risk class.
+
+6. **Single year, single portfolio.** No trend, no inflation adjustment, no repair
+   cost index. Repair costs have been rising faster than general inflation, which
+   would push severity up further.
+
+7. **No policyholder behaviour.** We compute retention mechanically. In reality a
+   higher deductible changes reporting behaviour and lapse rates, which would feed
+   back into both frequency and portfolio composition.
+
+8. **Expenses and recoveries excluded.** No claim handling expense, salvage, or
+   subrogation. All are absent from the public data, per Qiwei's inventory.
+
+---
+
+## Questions we will be asked {#sec-qa}
+
+The brief lists the questions every student should be ready to answer. Roughly six
+minutes of questions across the group, and the checklist requires each of us to
+respond without relying on slide text. Everyone should be able to answer these for
+their own section.
+
+- What is the central question, and why is it worth investigating?
+- Why a negative binomial rather than a Poisson?
+- Why lognormal rather than gamma, or rather than Pareto?
+- Where did the frequency and severity multipliers come from?
+- What is the most important assumption, and which way does it bias the result?
+- Why did you hold expected cost equal between the two designs?
+- What does TVaR at 99% mean in plain language?
+- What is missing from your data that you would want before using this in practice?
+
+The second, third and sixth are the ones most likely to catch someone out, because
+they are choices we made rather than facts we looked up.
+
+---
+
+## Timeline {#sec-timeline}
+
+| Date | Milestone |
+|---|---|
+| Sun 31 Aug | Data loaded, distributions fitted, diagnostics agreed |
+| Wed 3 Sept | Simulation running, baseline and scenario results produced |
+| Fri 5 Sept | Analysis frozen. No new numbers after this point |
+| Sun 7 Sept | Slides merged into one template, first full run-through |
+| Tue 8 Sept | Final run-through with timing, question practice |
+| Wed 9 Sept | Presentation, 18:00 EST |
+
+The freeze on 5 September is the important one. Slides built on numbers that are still
+moving get rebuilt, and there is no room to rebuild them.
+
+---
+
+## References
+
+Sources to carry onto the final reference slide.
+
+- Dutang, C. and Charpentier, A. *CASdatasets*: Insurance datasets.
+  `pricingame` reference, French Institute of Actuaries Pricing Games.
+  <https://dutangc.github.io/CASdatasets/reference/pricingame.html>
+- Highway Loss Data Institute. Comparison of 2017-22 model year vehicles with and
+  without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, 11 August 2026.
+- Highway Loss Data Institute. *Compendium of HLDI collision avoidance research*,
+  Bulletin Vol. 40, No. 4, April 2023.
+- Ye, Q. *Public Insurance Dataset Candidates: Auto Deductible vs Coinsurance
+  Simulation.* Six-dataset inventory with variable availability matrix, 21 August 2026.
+- MFI Refresher Group Presentation Project, Student Project Brief, Track 4.
