@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="light" name="color-scheme"/>
+<title>Public Insurance Dataset Candidates — Auto Deductible vs Coinsurance Simulation</title>
+<style>
+    :root {
+      --ink: #162033;
+      --muted: #5d687a;
+      --line: #d9e0e8;
+      --soft: #f5f7fa;
+      --panel: #ffffff;
+      --accent: #244f73;
+      --accent-soft: #eaf1f7;
+      --yes-bg: #e4f3e8;
+      --yes-ink: #155c2f;
+      --no-bg: #f2f4f7;
+      --no-ink: #6c7480;
+      --warning-bg: #fff7df;
+      --warning-line: #e6c45b;
+      --shadow: 0 8px 24px rgba(30, 46, 66, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      line-height: 1.52;
+    }
+    a { color: var(--accent); text-underline-offset: 2px; }
+    a:hover { text-decoration-thickness: 2px; }
+    .page {
+      width: min(1520px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+    header.hero {
+      background: linear-gradient(135deg, #173b59 0%, #285f86 100%);
+      color: white;
+      border-radius: 18px;
+      padding: 38px 42px;
+      box-shadow: var(--shadow);
+    }
+    .kicker {
+      margin: 0 0 8px;
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.82;
+    }
+    h1 {
+      max-width: 1040px;
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+    }
+    .hero p {
+      max-width: 1050px;
+      margin: 18px 0 0;
+      font-size: 1.04rem;
+      color: rgba(255,255,255,0.88);
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 22px;
+      margin-top: 20px;
+      font-size: 0.86rem;
+      color: rgba(255,255,255,0.78);
+    }
+    .notice {
+      margin: 22px 0;
+      padding: 17px 19px;
+      background: var(--warning-bg);
+      border: 1px solid #f0d889;
+      border-left: 5px solid var(--warning-line);
+      border-radius: 10px;
+    }
+    .notice strong { display: block; margin-bottom: 3px; }
+    nav.toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 22px 0 28px;
+    }
+    nav.toc a {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 650;
+    }
+    section {
+      margin-top: 34px;
+      scroll-margin-top: 16px;
+    }
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 15px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.65rem;
+      letter-spacing: -0.02em;
+    }
+    .section-heading p {
+      max-width: 760px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: right;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+    .controls input {
+      width: min(520px, 100%);
+      padding: 11px 13px;
+      border: 1px solid #bfc9d5;
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+    }
+    .controls button {
+      border: 1px solid #bfc9d5;
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    .dataset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .dataset-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      padding: 21px;
+      box-shadow: 0 4px 14px rgba(30,46,66,0.045);
+      scroll-margin-top: 18px;
+    }
+    .dataset-card[hidden] { display: none; }
+    .card-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+    }
+    .group-pill {
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 760;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+    .coverage-score {
+      color: var(--muted);
+      font-size: 0.76rem;
+      white-space: nowrap;
+    }
+    h3 {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      letter-spacing: -0.012em;
+    }
+    .observation-box {
+      display: grid;
+      gap: 2px;
+      margin: 0 0 13px;
+      padding: 11px 12px;
+      background: #f7f9fb;
+      border: 1px solid #e5eaf0;
+      border-radius: 9px;
+    }
+    .eyebrow {
+      color: var(--muted);
+      font-size: 0.69rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .observation-box strong { font-size: 0.95rem; }
+    .dataset-card > p { margin: 10px 0; }
+    .compact-dl {
+      display: grid;
+      gap: 8px;
+      margin: 13px 0;
+    }
+    .compact-dl div {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 10px;
+    }
+    .compact-dl dt {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 760;
+      text-transform: uppercase;
+      letter-spacing: 0.035em;
+    }
+    .compact-dl dd {
+      margin: 0;
+      font-size: 0.91rem;
+    }
+    .sources {
+      padding-top: 10px;
+      border-top: 1px solid #e8edf2;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .table-shell {
+      overflow: auto;
+      max-height: 76vh;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      box-shadow: 0 4px 14px rgba(30,46,66,0.04);
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .matrix {
+      min-width: 1240px;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+    th, td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 8px 7px;
+      vertical-align: middle;
+    }
+    tr:last-child th, tr:last-child td { border-bottom: 0; }
+    th:last-child, td:last-child { border-right: 0; }
+    .matrix thead th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: #eaf0f5;
+      color: #263b4f;
+      font-weight: 800;
+    }
+    .matrix thead th:first-child {
+      left: 0;
+      z-index: 5;
+      min-width: 230px;
+      text-align: left;
+    }
+    .matrix tbody th {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      min-width: 230px;
+      max-width: 260px;
+      background: white;
+      text-align: left;
+      font-size: 0.8rem;
+    }
+    .matrix tbody tr:hover th { background: #f6f9fb; }
+    .matrix tbody tr[hidden] { display: none; }
+    .matrix abbr {
+      text-decoration: none;
+      cursor: help;
+    }
+    .cell-yes { background: var(--yes-bg); color: var(--yes-ink); }
+    .cell-no { background: var(--no-bg); color: var(--no-ink); }
+    .binary {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+    .cell-yes .binary { background: rgba(255,255,255,0.58); }
+    .cell-no .binary { background: rgba(255,255,255,0.65); }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 18px;
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-swatch {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.74rem;
+      font-weight: 850;
+    }
+    .legend-swatch.yes { background: var(--yes-bg); color: var(--yes-ink); }
+    .legend-swatch.no { background: var(--no-bg); color: var(--no-ink); }
+    .qualification-list {
+      margin: 15px 0 0;
+      padding-left: 22px;
+    }
+    .qualification-list li { margin: 7px 0; }
+    .two-column {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .key-table, .source-panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .key-table th {
+      width: 92px;
+      background: #f3f6f9;
+      text-align: left;
+    }
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #edf2f6;
+      color: #203b53;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82em;
+    }
+    .interpretation {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 19px;
+    }
+    .interpretation h3 { margin-top: 0; }
+    .interpretation ul { margin: 0; padding-left: 20px; }
+    .interpretation li { margin: 8px 0; }
+    .source-panel {
+      padding: 18px 20px;
+    }
+    .source-panel ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .source-panel li {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      column-gap: 9px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e8edf2;
+    }
+    .source-panel li:last-child { border-bottom: 0; }
+    .source-number {
+      grid-row: 1 / span 2;
+      display: inline-grid;
+      place-items: center;
+      align-self: start;
+      min-height: 25px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 0.73rem;
+    }
+    .source-url {
+      display: block;
+      grid-column: 2;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 0.69rem;
+      overflow-wrap: anywhere;
+    }
+    footer {
+      margin-top: 36px;
+      padding: 20px 0 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .back-top { float: right; }
+    @media (max-width: 900px) {
+      .page { width: min(100% - 20px, 1520px); padding-top: 10px; }
+      header.hero { border-radius: 12px; padding: 28px 22px; }
+      .dataset-grid, .two-column { grid-template-columns: 1fr; }
+      .section-heading { display: block; }
+      .section-heading p { margin-top: 6px; text-align: left; }
+      .compact-dl div { grid-template-columns: 1fr; gap: 2px; }
+      .table-shell { max-height: none; }
+    }
+    @media print {
+      @page { size: landscape; margin: 10mm; }
+      body { background: white; font-size: 9pt; }
+      .page { width: 100%; padding: 0; }
+      header.hero { box-shadow: none; border-radius: 0; padding: 16mm 12mm; }
+      .controls, nav.toc, .back-top { display: none !important; }
+      .dataset-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .dataset-card { break-inside: avoid; box-shadow: none; padding: 12px; }
+      section { break-before: auto; }
+      #matrix { break-before: page; }
+      .table-shell { max-height: none; overflow: visible; box-shadow: none; }
+      .matrix { min-width: 0; font-size: 6.4pt; }
+      .matrix thead th, .matrix tbody th { position: static; }
+      .matrix thead th:first-child, .matrix tbody th { min-width: 42mm; max-width: 42mm; }
+      th, td { padding: 3px 2px; }
+      .binary { width: 17px; height: 17px; }
+      a { color: inherit; text-decoration: none; }
+      .source-url { display: block; }
+    }
+  
+    .qualified-cell { position: relative; }
+    .qflag {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      display: inline-grid;
+      place-items: center;
+      min-width: 21px;
+      height: 15px;
+      padding: 0 3px;
+      border: 1px solid #d6a936;
+      border-radius: 4px;
+      background: #fff4cc;
+      color: #744b00;
+      font-size: 0.52rem;
+      font-weight: 850;
+      line-height: 1;
+      text-decoration: none;
+      z-index: 7;
+    }
+    .qflag:hover, .qflag:focus {
+      background: #ffeaa0;
+      outline: 2px solid rgba(116, 75, 0, 0.2);
+      outline-offset: 1px;
+    }
+    .legend-qflag {
+      display: inline-grid;
+      place-items: center;
+      min-width: 28px;
+      height: 22px;
+      padding: 0 4px;
+      border: 1px solid #d6a936;
+      border-radius: 4px;
+      background: #fff4cc;
+      color: #744b00;
+      font-size: 0.68rem;
+      font-weight: 850;
+    }
+    .matrix-qualifications {
+      margin-top: 15px;
+      padding: 18px 19px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      scroll-margin-top: 16px;
+    }
+    .matrix-qualifications h3 { margin: 0 0 4px; }
+    .matrix-qualifications > p {
+      margin: 0 0 13px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .q-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .q-list li {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 8px;
+      align-items: start;
+      padding: 9px 0;
+      border-top: 1px solid #e8edf2;
+      scroll-margin-top: 16px;
+    }
+    .q-code {
+      display: inline-grid;
+      place-items: center;
+      min-height: 25px;
+      border: 1px solid #d6a936;
+      border-radius: 5px;
+      background: #fff4cc;
+      color: #744b00;
+      font-size: 0.7rem;
+      font-weight: 850;
+    }
+    .q-list li div { font-size: 0.85rem; }
+    .q-sources { white-space: nowrap; color: var(--muted); }
+    .variable-key-shell { display: block; }
+    .variable-key-shell .key-table { width: 100%; }
+    @media (max-width: 900px) {
+      .q-list { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .qflag {
+        position: static;
+        display: inline-grid;
+        margin-left: 2px;
+        min-width: 16px;
+        height: 12px;
+        font-size: 5pt;
+      }
+      .q-list { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+</head>
+<body>
+<div class="page" id="top">
+<header class="hero">
+<p class="kicker">Public-data inventory</p>
+<h1>Dataset Candidates for an Auto Deductible vs Coinsurance Simulation</h1>
+<p>Six public insurance dataset candidates, their observation units and approximate or precise sizes, and a binary matrix showing whether each required or recommended simulation variable is available.</p>
+<div class="meta-row">
+<span>Web review date: 21 August 2026</span>
+<span>6 dataset candidates</span>
+<span>18 simulation-variable categories</span>
+</div>
+</header>
+<aside class="notice"><strong>Central data gap</strong> None of the six retained insurance datasets publishes a verified ground-up repair cost together with numeric deductible, contractual coinsurance, operative policy limit, claim expense or recovery data, and policyholder retention. A decision-grade simulation therefore requires combining datasets with actuarial assumptions or internal data.</aside>
+<nav aria-label="Report sections" class="toc">
+<a href="#profiles">Dataset profiles</a>
+<a href="#matrix">Binary matrix</a>
+<a href="#definitions">Variable key</a>
+<a href="#matrix-qualifications">Matrix qualifications</a>
+<a href="#sources">Sources</a>
+</nav>
+<main>
+<section id="profiles">
+<div class="section-heading">
+<h2>Dataset profiles</h2>
+<p>
+            “Observation” follows the source’s unit of analysis: policy row, claim row, customer-year,
+            policy-year, vehicle configuration, sampled crash report, jurisdiction-year, or monthly index.
+          </p>
+</div>
+<div class="controls">
+<input aria-label="Filter dataset profiles and matrix" id="dataset-filter" placeholder="Filter datasets or categories…" type="search"/>
+<button id="clear-filter" type="button">Clear</button>
+</div>
+<div class="dataset-grid">
+<article class="dataset-card" data-search="core insurance microdata 12/18 variables cas pricing game 2016 observation count / unit 87,228 policy rows + 4,568 claim rows french private-motor material-damage data released for the 2016 pricing game. separate policy and claim tables provide exposure, risk characteristics, claim charge, settlement year, deductible category, sum-insured category, and a compensation-rate field. principal limitation deductible and sum insured are categorical. the compensation rate is not verified as contractual policyholder coinsurance, and claim charge is not a verified ground-up repair cost. s1: casdatasets documentation" id="cas-pricing-game">
+<div class="card-topline">
+<span class="group-pill">Core insurance microdata</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">12/18 variables</span>
+</div>
+<h3>CAS Pricing Game 2016</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>87,228 policy rows + 4,568 claim rows</strong>
+</div>
+<p>French private-motor material-damage data released for the 2016 pricing game. Separate policy and claim tables provide exposure, risk characteristics, claim charge, settlement year, deductible category, sum-insured category, and a compensation-rate field.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>Deductible and sum insured are categorical. The compensation rate is not verified as contractual policyholder coinsurance, and claim charge is not a verified ground-up repair cost.</dd></div>
+</dl>
+<p class="sources"><a href="https://dutangc.github.io/CASdatasets/reference/pricingame.html" rel="noopener noreferrer" target="_blank">S1: CASdatasets documentation</a></p>
+</article>
+<article class="dataset-card" data-search="core insurance microdata 11/18 variables spanish actual motor portfolio, 2015–2018 observation count / unit 105,555 policy-period transactions; 30 variables a real spanish non-life motor portfolio covering november 2015 through december 2018. it contains policy dates, premiums, annual claim counts and costs, lapse or renewal information, and driver and vehicle risk characteristics. principal limitation the main file aggregates claims by policy period. coverage or claim-type detail is available only for a limited subset, and own-damage amounts may already be net of applicable deductibles. s2: mendeley data · s3: european actuarial journal article" id="spanish-actual-portfolio">
+<div class="card-topline">
+<span class="group-pill">Core insurance microdata</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">11/18 variables</span>
+</div>
+<h3>Spanish Actual Motor Portfolio, 2015–2018</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>105,555 policy-period transactions; 30 variables</strong>
+</div>
+<p>A real Spanish non-life motor portfolio covering November 2015 through December 2018. It contains policy dates, premiums, annual claim counts and costs, lapse or renewal information, and driver and vehicle risk characteristics.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>The main file aggregates claims by policy period. Coverage or claim-type detail is available only for a limited subset, and own-damage amounts may already be net of applicable deductibles.</dd></div>
+</dl>
+<p class="sources"><a href="https://data.mendeley.com/datasets/5cxyb5fp4f/2" rel="noopener noreferrer" target="_blank">S2: Mendeley Data</a> · <a href="https://link.springer.com/article/10.1007/s13385-024-00398-0" rel="noopener noreferrer" target="_blank">S3: European Actuarial Journal article</a></p>
+</article>
+<article class="dataset-card" data-search="retention benchmark 6/18 variables guillén–bolancé–frees–valdez five-year data observation count / unit 40,284 customers; 122,935 customer-year rows longitudinal data for spanish customers holding motor and homeowners contracts from 2010 to 2014. the file contains a persistent customer identifier, yearly renewal outcome, customer attributes, and annual motor and home claim counts and costs. principal limitation motor losses are annual aggregates, the portfolio combines motor and home relationships, and deductible, coinsurance, premium-change, and claim-level repair information are absent. s4: mendeley data" id="guillen-five-year">
+<div class="card-topline">
+<span class="group-pill">Retention benchmark</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">6/18 variables</span>
+</div>
+<h3>Guillén–Bolancé–Frees–Valdez Five-Year Data</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>40,284 customers; 122,935 customer-year rows</strong>
+</div>
+<p>Longitudinal data for Spanish customers holding motor and homeowners contracts from 2010 to 2014. The file contains a persistent customer identifier, yearly renewal outcome, customer attributes, and annual motor and home claim counts and costs.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>Motor losses are annual aggregates, the portfolio combines motor and home relationships, and deductible, coinsurance, premium-change, and claim-level repair information are absent.</dd></div>
+</dl>
+<p class="sources"><a href="https://data.mendeley.com/datasets/vfchtm5y7j/1" rel="noopener noreferrer" target="_blank">S4: Mendeley Data</a></p>
+</article>
+<article class="dataset-card" data-search="core insurance microdata 11/18 variables spanish coverage-specific motor portfolio, 2022–2024 observation count / unit 354,140 policy-year records; 47 variables an anonymised spanish portfolio with coverage-level premiums, exposure, claim counts, and incurred amounts for property damage and other coverages. it also contains policy status, risk characteristics, and an indicator distinguishing comprehensive cover with versus without an excess. principal limitation there is no numeric deductible, claim-level repair cost, contractual coinsurance field, or operative per-claim limit. incurred amounts combine paid values and reserves. s5: mendeley data · s6: data in brief full text" id="spanish-coverage-specific">
+<div class="card-topline">
+<span class="group-pill">Core insurance microdata</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">11/18 variables</span>
+</div>
+<h3>Spanish Coverage-Specific Motor Portfolio, 2022–2024</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>354,140 policy-year records; 47 variables</strong>
+</div>
+<p>An anonymised Spanish portfolio with coverage-level premiums, exposure, claim counts, and incurred amounts for property damage and other coverages. It also contains policy status, risk characteristics, and an indicator distinguishing comprehensive cover with versus without an excess.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>There is no numeric deductible, claim-level repair cost, contractual coinsurance field, or operative per-claim limit. Incurred amounts combine paid values and reserves.</dd></div>
+</dl>
+<p class="sources"><a href="https://data.mendeley.com/datasets/sw4jmdb2sm/1" rel="noopener noreferrer" target="_blank">S5: Mendeley Data</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC13234478/" rel="noopener noreferrer" target="_blank">S6: Data in Brief full text</a></p>
+</article>
+<article class="dataset-card" data-search="core insurance microdata 6/18 variables fremtpl2 observation count / unit 677,991 policy rows + 26,444 claim rows a widely used french motor third-party-liability pair of frequency and severity files. the policy table includes exposure and rating characteristics; the severity table provides individual claim amounts linked by policy identifier. principal limitation the coverage is third-party liability rather than own-damage collision, and the public files omit deductibles, limits, premiums, retention outcomes, and an explicit paid/incurred basis. s7: casdatasets documentation" id="fremtpl2">
+<div class="card-topline">
+<span class="group-pill">Core insurance microdata</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">6/18 variables</span>
+</div>
+<h3>freMTPL2</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>677,991 policy rows + 26,444 claim rows</strong>
+</div>
+<p>A widely used French motor third-party-liability pair of frequency and severity files. The policy table includes exposure and rating characteristics; the severity table provides individual claim amounts linked by policy identifier.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>The coverage is third-party liability rather than own-damage collision, and the public files omit deductibles, limits, premiums, retention outcomes, and an explicit paid/incurred basis.</dd></div>
+</dl>
+<p class="sources"><a href="https://dutangc.github.io/CASdatasets/reference/freMTPL.html" rel="noopener noreferrer" target="_blank">S7: CASdatasets documentation</a></p>
+</article>
+<article class="dataset-card" data-search="core insurance aggregates 7/18 variables brazilian brvehins1 observation count / unit 1,965,355 policy/segment records brazilian vehicle-insurance data derived from the susep autoseg system for 2011. records contain driver, vehicle, and area characteristics; exposure; premiums; average sum insured; and separate claim counts and amounts for partial and total collision and other guarantees. principal limitation losses are aggregated over the exposure period, there is no persistent policy identifier, and average sum insured is not necessarily the operative limit on an individual claim. s8: casdatasets documentation" id="brvehins1">
+<div class="card-topline">
+<span class="group-pill">Core insurance aggregates</span>
+<span class="coverage-score" title="Number of matrix variables marked 1">7/18 variables</span>
+</div>
+<h3>Brazilian brvehins1</h3>
+<div class="observation-box">
+<span class="eyebrow">Observation count / unit</span>
+<strong>1,965,355 policy/segment records</strong>
+</div>
+<p>Brazilian vehicle-insurance data derived from the SUSEP AUTOSEG system for 2011. Records contain driver, vehicle, and area characteristics; exposure; premiums; average sum insured; and separate claim counts and amounts for partial and total collision and other guarantees.</p>
+<dl class="compact-dl">
+<div><dt>Principal limitation</dt><dd>Losses are aggregated over the exposure period, there is no persistent policy identifier, and average sum insured is not necessarily the operative limit on an individual claim.</dd></div>
+</dl>
+<p class="sources"><a href="https://dutangc.github.io/CASdatasets/reference/brvehins.html" rel="noopener noreferrer" target="_blank">S8: CASdatasets documentation</a></p>
+</article>
+
+
+
+
+</div>
+</section>
+<section id="matrix">
+<div class="section-heading">
+<h2>Binary dataset–variable matrix</h2>
+<p>1 means the public release contains the variable or permits exact calculation; 0 means it is absent in usable public form. Amber Q# badges identify material qualifications.</p>
+</div>
+<div aria-label="Binary legend" class="legend">
+<span class="legend-item"><span class="legend-swatch yes">1</span> possesses variable</span>
+<span class="legend-item"><span class="legend-swatch no">0</span> does not possess variable</span>
+<span class="legend-item"><span class="legend-qflag">Q#</span> material qualification; select the badge for details</span></div>
+<div aria-label="Scrollable binary dataset-variable matrix" class="table-shell" role="region" tabindex="0">
+<table class="matrix">
+<thead>
+<tr>
+<th scope="col">Dataset</th>
+<th scope="col"><abbr title="Persistent policy or customer identifier">PID</abbr></th><th scope="col"><abbr title="Claim or policy calendar year/date">TIME</abbr></th><th scope="col"><abbr title="Earned policy exposure, such as vehicle-years">EXP</abbr></th><th scope="col"><abbr title="Claim or crash-count frequency information">FREQ</abbr></th><th scope="col"><abbr title="Individual claim-level loss amount">CL</abbr></th><th scope="col"><abbr title="Policy-, segment-, or vehicle-level aggregate loss or average severity">AGG</abbr></th><th class="qualified-cell" scope="col"><abbr title="Verified ground-up repair cost before deductible, coinsurance, and limit">GU</abbr><a aria-label="Q7 qualification: Cross-dataset ground-up and recovery gap" class="qflag" href="#q7" title="Q7: Cross-dataset ground-up and recovery gap">Q7</a></th><th scope="col"><abbr title="Collision or property-damage observations can be isolated">COLL</abbr></th><th scope="col"><abbr title="Deductible indicator, category, or amount">DED</abbr></th><th scope="col"><abbr title="Coinsurance or insurer-payment-share field">COIN</abbr></th><th scope="col"><abbr title="Policy limit or sum-insured field">LIM</abbr></th><th scope="col"><abbr title="Policy or coverage premium">PREM</abbr></th><th scope="col"><abbr title="Renewal, cancellation, lapse, or retention outcome">RET</abbr></th><th scope="col"><abbr title="Driver, vehicle, territory, or other risk characteristics">RISK</abbr></th><th scope="col"><abbr title="Paid/incurred/reserve/settlement information identifying loss basis">BASIS</abbr></th><th scope="col"><abbr title="Vehicle mileage or vehicle-miles-travelled exposure">VMT</abbr></th><th scope="col"><abbr title="Repair-cost or repair-price trend index">RPI</abbr></th><th class="qualified-cell" scope="col"><abbr title="Claim-handling expense, salvage, subrogation, or recovery amount">LAE/REC</abbr><a aria-label="Q7 qualification: Cross-dataset ground-up and recovery gap" class="qflag" href="#q7" title="Q7: Cross-dataset ground-up and recovery gap">Q7</a></th>
+</tr>
+</thead>
+<tbody>
+<tr data-search="cas pricing game 2016 1 1 1 1 1 q1 1 0 1 1 q1 1 q1 1 q1 0 0 1 1 q1 0 0 0">
+<th scope="row"><a href="#cas-pricing-game">CAS Pricing Game 2016</a></th>
+<td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q1 qualification: CAS contract and loss fields" class="qflag" href="#q1" title="Q1: CAS contract and loss fields">Q1</a></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q1 qualification: CAS contract and loss fields" class="qflag" href="#q1" title="Q1: CAS contract and loss fields">Q1</a></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q1 qualification: CAS contract and loss fields" class="qflag" href="#q1" title="Q1: CAS contract and loss fields">Q1</a></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q1 qualification: CAS contract and loss fields" class="qflag" href="#q1" title="Q1: CAS contract and loss fields">Q1</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q1 qualification: CAS contract and loss fields" class="qflag" href="#q1" title="Q1: CAS contract and loss fields">Q1</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+<tr data-search="spanish actual portfolio 1 1 1 1 1 q2 1 q2 0 1 q2 0 0 0 1 1 1 1 q2 0 0 0">
+<th scope="row"><a href="#spanish-actual-portfolio">Spanish actual portfolio</a></th>
+<td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q2 qualification: Spanish 2015–2018 aggregation" class="qflag" href="#q2" title="Q2: Spanish 2015–2018 aggregation">Q2</a></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q2 qualification: Spanish 2015–2018 aggregation" class="qflag" href="#q2" title="Q2: Spanish 2015–2018 aggregation">Q2</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q2 qualification: Spanish 2015–2018 aggregation" class="qflag" href="#q2" title="Q2: Spanish 2015–2018 aggregation">Q2</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q2 qualification: Spanish 2015–2018 aggregation" class="qflag" href="#q2" title="Q2: Spanish 2015–2018 aggregation">Q2</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+<tr data-search="five-year customer data 1 1 0 1 q3 0 1 q3 0 0 0 0 0 0 1 q3 1 0 0 0 0">
+<th scope="row"><a href="#guillen-five-year">Five-year customer data</a></th>
+<td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q3 qualification: Five-year customer panel" class="qflag" href="#q3" title="Q3: Five-year customer panel">Q3</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q3 qualification: Five-year customer panel" class="qflag" href="#q3" title="Q3: Five-year customer panel">Q3</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q3 qualification: Five-year customer panel" class="qflag" href="#q3" title="Q3: Five-year customer panel">Q3</a></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+<tr data-search="spanish coverage-specific 1 1 1 1 0 1 q4 0 1 1 q4 0 0 1 1 q4 1 1 q4 0 0 0">
+<th scope="row"><a href="#spanish-coverage-specific">Spanish coverage-specific</a></th>
+<td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q4 qualification: Spanish 2022–2024 field granularity" class="qflag" href="#q4" title="Q4: Spanish 2022–2024 field granularity">Q4</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q4 qualification: Spanish 2022–2024 field granularity" class="qflag" href="#q4" title="Q4: Spanish 2022–2024 field granularity">Q4</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q4 qualification: Spanish 2022–2024 field granularity" class="qflag" href="#q4" title="Q4: Spanish 2022–2024 field granularity">Q4</a></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q4 qualification: Spanish 2022–2024 field granularity" class="qflag" href="#q4" title="Q4: Spanish 2022–2024 field granularity">Q4</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+<tr data-search="fremtpl2 1 0 1 1 q5 1 q5 1 q5 0 0 0 0 0 0 0 1 0 0 0 0">
+<th scope="row"><a href="#fremtpl2">freMTPL2</a></th>
+<td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q5 qualification: freMTPL2 coverage and convention" class="qflag" href="#q5" title="Q5: freMTPL2 coverage and convention">Q5</a></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q5 qualification: freMTPL2 coverage and convention" class="qflag" href="#q5" title="Q5: freMTPL2 coverage and convention">Q5</a></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q5 qualification: freMTPL2 coverage and convention" class="qflag" href="#q5" title="Q5: freMTPL2 coverage and convention">Q5</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+<tr data-search="brazilian brvehins1 0 0 1 1 0 1 q6 0 1 0 0 1 q6 1 0 1 0 0 0 0">
+<th scope="row"><a href="#brvehins1">Brazilian brvehins1</a></th>
+<td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q6 qualification: Brazilian aggregate fields" class="qflag" href="#q6" title="Q6: Brazilian aggregate fields">Q6</a></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes qualified-cell"><span aria-label="Possesses variable" class="binary">1</span><a aria-label="Q6 qualification: Brazilian aggregate fields" class="qflag" href="#q6" title="Q6: Brazilian aggregate fields">Q6</a></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-yes"><span aria-label="Possesses variable" class="binary">1</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td><td class="cell-no"><span aria-label="Does not possess variable" class="binary">0</span></td>
+</tr>
+
+
+
+
+</tbody>
+</table>
+</div><div class="matrix-qualifications" id="matrix-qualifications"><h3>Qualification flags in the matrix</h3><p>Q1–Q6 identify dataset-specific limitations. Q7 marks variables that are absent across all six retained candidates.</p><ol class="q-list"><li id="q1"><span class="q-code">Q1</span><div><strong>CAS contract and loss fields</strong><span> — The deductible and sum-insured fields are categories. The compensation-rate field is not confirmed as contractual policyholder coinsurance, and claim charge is not verified ground-up repair cost.</span><span class="q-sources"> Sources: <a href="#source-1">S1</a></span></div></li><li id="q2"><span class="q-code">Q2</span><div><strong>Spanish 2015–2018 aggregation</strong><span> — The principal file is organised by policy transaction and mainly reports policy-period claim counts and costs; more detailed claim information is limited. Own-damage values may already reflect policy terms.</span><span class="q-sources"> Sources: <a href="#source-2">S2</a>, <a href="#source-3">S3</a></span></div></li><li id="q3"><span class="q-code">Q3</span><div><strong>Five-year customer panel</strong><span> — Motor claim counts and costs are annual customer-level aggregates, only at-fault motor claims are included, and the same customers also hold homeowners contracts.</span><span class="q-sources"> Sources: <a href="#source-4">S4</a></span></div></li><li id="q4"><span class="q-code">Q4</span><div><strong>Spanish 2022–2024 field granularity</strong><span> — The excess field identifies cover with versus without an excess rather than a numeric amount. Policy status is not a causal renewal experiment, and financial amounts are coverage-level incurred values.</span><span class="q-sources"> Sources: <a href="#source-5">S5</a>, <a href="#source-6">S6</a></span></div></li><li id="q5"><span class="q-code">Q5</span><div><strong>freMTPL2 coverage and convention</strong><span> — The data cover third-party liability rather than own-damage collision. Some claim amounts may reflect French IRSA–IDA settlement conventions, and the public files do not state a full ground-up loss basis.</span><span class="q-sources"> Sources: <a href="#source-7">S7</a></span></div></li><li id="q6"><span class="q-code">Q6</span><div><strong>Brazilian aggregate fields</strong><span> — The sum-insured field is an average, not a verified operative per-claim limit. Claim counts and amounts are aggregated over the exposure period.</span><span class="q-sources"> Sources: <a href="#source-8">S8</a></span></div></li><li id="q7"><span class="q-code">Q7</span><div><strong>Cross-dataset ground-up and recovery gap</strong><span> — Across the candidates, verified ground-up loss and claim-expense/recovery fields are absent. No release alone identifies all sub-deductible events or the full amount above policy limits.</span></div></li></ol></div>
+</section>
+<section id="definitions">
+<div class="section-heading">
+<h2>Variable key</h2>
+<p>The matrix evaluates public availability, not whether the field is already cleaned or actuarially interpreted.</p>
+</div>
+<div class="variable-key-shell">
+<table class="key-table">
+<tbody>
+<tr><th scope="row"><code>PID</code></th><td>Persistent policy or customer identifier</td></tr><tr><th scope="row"><code>TIME</code></th><td>Claim or policy calendar year/date</td></tr><tr><th scope="row"><code>EXP</code></th><td>Earned policy exposure, such as vehicle-years</td></tr><tr><th scope="row"><code>FREQ</code></th><td>Claim or crash-count frequency information</td></tr><tr><th scope="row"><code>CL</code></th><td>Individual claim-level loss amount</td></tr><tr><th scope="row"><code>AGG</code></th><td>Policy-, segment-, or vehicle-level aggregate loss or average severity</td></tr><tr><th scope="row"><code>GU</code></th><td>Verified ground-up repair cost before deductible, coinsurance, and limit</td></tr><tr><th scope="row"><code>COLL</code></th><td>Collision or property-damage observations can be isolated</td></tr><tr><th scope="row"><code>DED</code></th><td>Deductible indicator, category, or amount</td></tr><tr><th scope="row"><code>COIN</code></th><td>Coinsurance or insurer-payment-share field</td></tr><tr><th scope="row"><code>LIM</code></th><td>Policy limit or sum-insured field</td></tr><tr><th scope="row"><code>PREM</code></th><td>Policy or coverage premium</td></tr><tr><th scope="row"><code>RET</code></th><td>Renewal, cancellation, lapse, or retention outcome</td></tr><tr><th scope="row"><code>RISK</code></th><td>Driver, vehicle, territory, or other risk characteristics</td></tr><tr><th scope="row"><code>BASIS</code></th><td>Paid/incurred/reserve/settlement information identifying loss basis</td></tr><tr><th scope="row"><code>VMT</code></th><td>Vehicle mileage or vehicle-miles-travelled exposure</td></tr><tr><th scope="row"><code>RPI</code></th><td>Repair-cost or repair-price trend index</td></tr><tr><th scope="row"><code>LAE/REC</code></th><td>Claim-handling expense, salvage, subrogation, or recovery amount</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="sources">
+<div class="section-heading">
+<h2>Web sources</h2>
+<p>Primary dataset documentation and accompanying peer-reviewed or technical publications were preferred.</p>
+</div>
+<div class="source-panel">
+<ol>
+<li id="source-1"><span class="source-number">S1</span> <a href="https://dutangc.github.io/CASdatasets/reference/pricingame.html" rel="noopener noreferrer" target="_blank">CASdatasets documentation</a><span class="source-url">https://dutangc.github.io/CASdatasets/reference/pricingame.html</span></li><li id="source-2"><span class="source-number">S2</span> <a href="https://data.mendeley.com/datasets/5cxyb5fp4f/2" rel="noopener noreferrer" target="_blank">Mendeley Data</a><span class="source-url">https://data.mendeley.com/datasets/5cxyb5fp4f/2</span></li><li id="source-3"><span class="source-number">S3</span> <a href="https://link.springer.com/article/10.1007/s13385-024-00398-0" rel="noopener noreferrer" target="_blank">European Actuarial Journal article</a><span class="source-url">https://link.springer.com/article/10.1007/s13385-024-00398-0</span></li><li id="source-4"><span class="source-number">S4</span> <a href="https://data.mendeley.com/datasets/vfchtm5y7j/1" rel="noopener noreferrer" target="_blank">Mendeley Data</a><span class="source-url">https://data.mendeley.com/datasets/vfchtm5y7j/1</span></li><li id="source-5"><span class="source-number">S5</span> <a href="https://data.mendeley.com/datasets/sw4jmdb2sm/1" rel="noopener noreferrer" target="_blank">Mendeley Data</a><span class="source-url">https://data.mendeley.com/datasets/sw4jmdb2sm/1</span></li><li id="source-6"><span class="source-number">S6</span> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC13234478/" rel="noopener noreferrer" target="_blank">Data in Brief full text</a><span class="source-url">https://pmc.ncbi.nlm.nih.gov/articles/PMC13234478/</span></li><li id="source-7"><span class="source-number">S7</span> <a href="https://dutangc.github.io/CASdatasets/reference/freMTPL.html" rel="noopener noreferrer" target="_blank">CASdatasets documentation</a><span class="source-url">https://dutangc.github.io/CASdatasets/reference/freMTPL.html</span></li><li id="source-8"><span class="source-number">S8</span> <a href="https://dutangc.github.io/CASdatasets/reference/brvehins.html" rel="noopener noreferrer" target="_blank">CASdatasets documentation</a><span class="source-url">https://dutangc.github.io/CASdatasets/reference/brvehins.html</span></li>
+</ol>
+</div>
+</section>
+</main>
+<footer>
+<a class="back-top" href="#top">Back to top</a>
+      Prepared as a six-dataset public insurance-data inventory for the project question:
+      “Fewer accidents but pricier repairs. Is the auto insurer better off with a higher deductible, or with coinsurance?”
+    </footer>
+</div>
+<script>
+    (function () {
+      const input = document.getElementById('dataset-filter');
+      const clear = document.getElementById('clear-filter');
+      const cards = Array.from(document.querySelectorAll('.dataset-card'));
+      const rows = Array.from(document.querySelectorAll('.matrix tbody tr'));
+
+      function applyFilter() {
+        const query = input.value.trim().toLowerCase();
+        cards.forEach(card => {
+          card.hidden = query && !card.dataset.search.includes(query);
+        });
+        rows.forEach(row => {
+          row.hidden = query && !row.dataset.search.includes(query);
+        });
+      }
+
+      input.addEventListener('input', applyFilter);
+      clear.addEventListener('click', function () {
+        input.value = '';
+        applyFilter();
+        input.focus();
+      });
+    })();
+  </script>
+</body>
+</html>
