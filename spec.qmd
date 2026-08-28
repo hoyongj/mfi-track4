@@ -41,9 +41,14 @@ owner.
 
 Presentation date: **9 September 2026, 18:00 EST**, first STA 2550 class.
 
+A note on numbering. This document numbers its own sections, and the presentation has
+five sections of its own. They are different things. Whenever this document refers to
+one of the five presentation sections it says so explicitly, for example "presentation
+section 4".
+
 ---
 
-## Central question {#sec-question}
+## Central question
 
 > **Fewer accidents but more expensive repairs. For an insurer facing that loss
 > profile, is a higher deductible or a lower deductible with coinsurance the better
@@ -57,9 +62,9 @@ First, it is a *decision* question, not a survey question. The brief is explicit
 a presentation should investigate a decision or problem rather than survey a topic.
 We compare exactly two contract designs and defend a choice between them.
 
-Second, the automation angle is the *motivation*, not the subject. We are not
-building a model of self-driving cars. We are taking a real, documented shift in the
-loss profile of vehicles equipped with driver assistance systems, and asking what it
+Second, the automation angle is the *motivation*, not the subject. We are not building
+a model of self-driving cars. We are taking a real, documented shift in the loss
+profile of vehicles equipped with driver assistance systems, and asking what it
 implies for contract design. That distinction keeps the scope inside what we can
 defend.
 
@@ -77,14 +82,13 @@ that only one person can run.
 
 ---
 
-## Dataset decision {#sec-data}
+## Dataset decision
 
 Status: **fixed**.
 
 Qiwei prepared a six-dataset public inventory on 21 August, scoring each candidate
 against eighteen variable categories required or useful for this simulation. That
-inventory drives the decision below, and it should be credited on the reference
-slide.
+inventory drives the decision below, and it should be credited on the reference slide.
 
 | Dataset | Coverage | Size | Score |
 |---|---|---|---|
@@ -146,10 +150,10 @@ claim table at all.
 
 ---
 
-## The ground-up gap {#sec-gu}
+## The ground-up gap
 
-Status: **fixed as a limitation**. This is the most important assumption in the
-project and it belongs on a slide.
+Status: **fixed as a limitation**. This is the most important assumption in the project
+and it belongs on a slide.
 
 Qiwei's matrix has a column labelled GU: verified ground-up repair cost, before any
 deductible, coinsurance or limit is applied.
@@ -172,16 +176,17 @@ The consequence for us is specific and quantifiable:
 - The bias therefore runs in a known direction, and it favours the high-deductible
   design.
 
-Stating the direction of the bias is much stronger than stating that a bias exists.
-It also answers one of the questions every student is told to be ready for: what
+Stating the direction of the bias is much stronger than stating that a bias exists. It
+also answers one of the questions every student is told to be ready for: what
 information is missing, censored, or aggregated.
 
 The Track 4 brief lists discussion of censoring and truncation as required evidence.
-So the gap Qiwei found is not an obstacle to the project. It is one of the deliverables.
+So the gap Qiwei found is not an obstacle to the project. It is one of the
+deliverables.
 
 ---
 
-## Model specification {#sec-model}
+## Model specification
 
 Status: **fixed**, subject to the diagnostics below coming out as expected.
 
@@ -196,8 +201,8 @@ $N$ and $X_i$ are assumed independent.
 
 **Negative binomial**, with Poisson fitted alongside as a diagnostic.
 
-The rationale is overdispersion. A Poisson model forces the variance to equal the
-mean, and motor claim counts almost always show a variance above the mean because
+The rationale is overdispersion. A Poisson model forces the variance to equal the mean,
+and motor claim counts almost always show a variance above the mean because
 policyholders are not identical. The negative binomial arises naturally as a Poisson
 mixture over unobserved heterogeneity, which is the right story here given that the
 risk characteristics in this dataset are anonymised and cannot fully explain that
@@ -218,10 +223,9 @@ right tail of the two, which matters for a question about tail risk. Select by A
 supported by a QQ plot, and show the QQ plot rather than only the AIC number, because
 a number is not interpretable and a plot is.
 
-We do **not** use a Pareto-type severity. It would be defensible, but with 4,568
-claims the tail index would be poorly estimated, and the brief is explicit that a
-simple analysis that is correctly understood beats a complex one that cannot be
-defended.
+We do **not** use a Pareto-type severity. It would be defensible, but with 4,568 claims
+the tail index would be poorly estimated, and the brief is explicit that a simple
+analysis that is correctly understood beats a complex one that cannot be defended.
 
 ### What we are not doing
 
@@ -236,8 +240,8 @@ library(fitdistrplus)
 library(MASS)
 
 # Frequency
-fit_pois <- glm(ClaimNb ~ 1, offset = log(Exposure), family = poisson,       data = pol)
-fit_nb   <- glm.nb(ClaimNb ~ 1 + offset(log(Exposure)),                      data = pol)
+fit_pois <- glm(ClaimNb ~ 1, offset = log(Exposure), family = poisson,  data = pol)
+fit_nb   <- glm.nb(ClaimNb ~ 1 + offset(log(Exposure)),                 data = pol)
 
 # Severity
 fit_ln <- fitdist(claim$ClaimAmount, "lnorm")
@@ -248,7 +252,7 @@ gofstat(list(fit_ln, fit_ga))
 
 ---
 
-## Scenario multipliers {#sec-scenario}
+## Scenario multipliers
 
 Status: **fixed for the baseline, sensitivity grid open**.
 
@@ -267,8 +271,8 @@ Matt Moore of IIHS-HLDI published the comparison on 11 August 2026. The findings
 | Property damage liability claim frequency | about **40% lower** |
 | Overall collision losses | about **5% lower** |
 
-The mechanism is that sensors are expensive to replace and usually require
-calibration afterwards, but equipped vehicles are in fewer crashes to begin with.
+The mechanism is that sensors are expensive to replace and usually require calibration
+afterwards, but equipped vehicles are in fewer crashes to begin with.
 
 ### Baseline scenario
 
@@ -283,18 +287,18 @@ mean while holding the coefficient of variation constant.
 
 ### Sensitivity grid
 
-Run the full model over $\phi_N \in [0.5, 1.0]$ and $\phi_X \in [1.0, 1.3]$ and
-present a contour of the result. This is the single most valuable slide in the deck,
-because it converts our biggest weakness, dependence on assumed parameters, into the
-subject of the analysis.
+Run the full model over $\phi_N \in [0.5, 1.0]$ and $\phi_X \in [1.0, 1.3]$ and present
+a contour of the result. This is the single most valuable slide in the deck, because it
+converts our biggest weakness, dependence on assumed parameters, into the subject of
+the analysis.
 
 ### Known weakness in this mapping
 
 **Open**, and someone should own writing two sentences on it.
 
 Property damage liability pays for damage to the *other* party's vehicle. Driver
-assistance on the insured vehicle reduces the frequency of causing such damage, but
-the severity of the repair applies to a third-party vehicle that may not be equipped.
+assistance on the insured vehicle reduces the frequency of causing such damage, but the
+severity of the repair applies to a third-party vehicle that may not be equipped.
 Applying a severity uplift derived from collision coverage to a liability portfolio is
 therefore an approximation. It is a reasonable one if the vehicle fleet as a whole is
 becoming equipped, which is the scenario we are describing, but it should be stated
@@ -302,7 +306,7 @@ rather than hidden.
 
 ---
 
-## Contract designs {#sec-contracts}
+## Contract designs
 
 Status: **fixed in structure, parameters open pending calibration**.
 
@@ -310,8 +314,8 @@ Insurer payment on a ground-up loss $X$:
 
 $$Y = \min\big(\alpha (X - d)_+,\; L\big)$$
 
-where $d$ is the deductible, $\alpha$ the insurer's share above the deductible, and
-$L$ the per-claim limit.
+where $d$ is the deductible, $\alpha$ the insurer's share above the deductible, and $L$
+the per-claim limit.
 
 | | Design A: high deductible | Design B: coinsurance |
 |---|---|---|
@@ -348,13 +352,13 @@ simulate_aggregate <- function(n_sims, lambda, size, sev_par, d, alpha, limit) {
 }
 ```
 
-Use at least 100,000 simulations, set a seed, and report the Monte Carlo standard
-error on the tail measures. A tail estimate quoted without its own uncertainty invites
-an obvious question.
+Use at least 100,000 simulations, set a seed, and report the Monte Carlo standard error
+on the tail measures. A tail estimate quoted without its own uncertainty invites an
+obvious question.
 
 ---
 
-## Required outputs {#sec-outputs}
+## Required outputs
 
 Status: **fixed**. Every item below appears either on a slide or in the appendix.
 
@@ -385,32 +389,34 @@ crowded ones, and the deck is capped at 20 slides including cover and figures.
 
 ---
 
-## Section ownership {#sec-owners}
+## Who owns what
 
-Five sections in the brief, five of us. Each person owns their section and presents
-it, two to four minutes each, no more than four slides each excluding the cover.
+Five sections in the brief, five of us. Each person owns one presentation section and
+presents it, two to four minutes each, no more than four slides each excluding the
+cover.
 
-| # | Section | Owner | Depends on |
-|---|---|---|---|
-| 1 | Problem and decision | **open** | nothing, can start now |
-| 2 | Key concepts | Hoyong Jung | nothing, can start now |
-| 3 | Analysis and evidence | Qiwei Ye | @sec-data, @sec-model |
-| 4 | Comparison and judgment | Daren Wang | section 3 outputs |
-| 5 | Conclusion and limitations | Xiaoxiao Fan | @sec-gu, @sec-scenario |
+| Presentation section | Owner | Needs |
+|---|---|---|
+| 1. Problem and decision | **open** | nothing, can start now |
+| 2. Key concepts | Hoyong Jung | nothing, can start now |
+| 3. Analysis and evidence | Qiwei Ye | the dataset and model spec above |
+| 4. Comparison and judgment | Daren Wang | outputs from presentation section 3 |
+| 5. Conclusion and limitations | Xiaoxiao Fan | the ground-up gap and limitations register |
 
-Section 1 is unclaimed. Faye, it is yours if you want it, and it is the section with
-the fewest dependencies.
+Presentation section 1 is unclaimed. Faye, it is yours if you want it, and it is the
+one with the fewest dependencies.
 
-### A note for sections 4 and 5
+### A note for presentation sections 4 and 5
 
-Both are downstream of the simulation, which creates a scheduling risk: if you wait
-for section 3 to finish, you compress into the final days.
+Both sit downstream of the simulation, which creates a scheduling risk: if you wait for
+section 3 to finish, you compress into the final days.
 
 Neither of you actually needs to wait.
 
 **Section 4** can be written against the *structure* of the result rather than the
 numbers. The comparison logic, which measures matter and why, and what would make each
-design preferable is all fixed by @sec-contracts. Draft it with placeholder numbers.
+design preferable is all fixed by the contract designs section above. Draft it with
+placeholder numbers.
 
 **Section 5** can be drafted almost entirely from this document today. The limitations
 register below is the raw material, and it will not change when the simulation
@@ -418,32 +424,31 @@ finishes.
 
 ### One open role
 
-**Slide template owner: open.** The brief requires the template to be consistent
-across all slides. Five people building slides independently produces five decks and
-a bad evening on 8 September. Whoever takes this should push a template to the repo
-before anyone starts making slides.
+**Slide template owner: open.** The brief requires the template to be consistent across
+all slides. Five people building slides independently produces five decks and a bad
+evening on 8 September. Whoever takes this should push a template to the repo before
+anyone starts making slides.
 
 ---
 
-## Limitations register {#sec-limitations}
+## Limitations register
 
-Raw material for section 5. Roughly in order of how badly each one would hurt if a
-question landed on it.
+Raw material for presentation section 5. Roughly in order of how badly each one would
+hurt if a question landed on it.
 
-1. **No ground-up losses.** No public dataset publishes verified ground-up repair
-   cost. Observed claims are left-truncated at an unknown reporting threshold, so the
-   fitted severity is conditional, small losses are undercounted, and the bias favours
-   the high-deductible design. See @sec-gu.
+1. **No ground-up losses.** No public dataset publishes verified ground-up repair cost.
+   Observed claims are left-truncated at an unknown reporting threshold, so the fitted
+   severity is conditional, small losses are undercounted, and the bias favours the
+   high-deductible design. This is the ground-up gap described above.
 
 2. **Coverage mismatch in the scenario.** Frequency and severity multipliers come from
    US collision and property damage liability experience; the data are French
-   third-party material damage. Both the country and the coverage differ. See
-   @sec-scenario.
+   third-party material damage. Both the country and the coverage differ, as noted
+   under scenario multipliers above.
 
-3. **Driver assistance is not full automation.** HLDI measures vehicles with
-   assistance bundles, not autonomous vehicles. We use it as the best available
-   observed evidence for the direction and rough size of the shift, not as a
-   measurement of automation.
+3. **Driver assistance is not full automation.** HLDI measures vehicles with assistance
+   bundles, not autonomous vehicles. We use it as the best available observed evidence
+   for the direction and rough size of the shift, not as a measurement of automation.
 
 4. **Independence assumed.** Claims are treated as independent. Vehicles sharing
    software or sensor hardware plausibly have correlated failure modes, which would
@@ -453,25 +458,25 @@ question landed on it.
 5. **Anonymised categorical levels.** Risk characteristics in this dataset have no
    published meaning, so we cannot segment or interpret by risk class.
 
-6. **Single year, single portfolio.** No trend, no inflation adjustment, no repair
-   cost index. Repair costs have been rising faster than general inflation, which
-   would push severity up further.
+6. **Single year, single portfolio.** No trend, no inflation adjustment, no repair cost
+   index. Repair costs have been rising faster than general inflation, which would push
+   severity up further.
 
 7. **No policyholder behaviour.** We compute retention mechanically. In reality a
-   higher deductible changes reporting behaviour and lapse rates, which would feed
-   back into both frequency and portfolio composition.
+   higher deductible changes reporting behaviour and lapse rates, which would feed back
+   into both frequency and portfolio composition.
 
 8. **Expenses and recoveries excluded.** No claim handling expense, salvage, or
    subrogation. All are absent from the public data, per Qiwei's inventory.
 
 ---
 
-## Questions we will be asked {#sec-qa}
+## Questions we will be asked
 
 The brief lists the questions every student should be ready to answer. Roughly six
-minutes of questions across the group, and the checklist requires each of us to
-respond without relying on slide text. Everyone should be able to answer these for
-their own section.
+minutes of questions across the group, and the checklist requires each of us to respond
+without relying on slide text. Everyone should be able to answer these for their own
+section.
 
 - What is the central question, and why is it worth investigating?
 - Why a negative binomial rather than a Poisson?
@@ -482,12 +487,12 @@ their own section.
 - What does TVaR at 99% mean in plain language?
 - What is missing from your data that you would want before using this in practice?
 
-The second, third and sixth are the ones most likely to catch someone out, because
-they are choices we made rather than facts we looked up.
+The second, third and sixth are the ones most likely to catch someone out, because they
+are choices we made rather than facts we looked up.
 
 ---
 
-## Timeline {#sec-timeline}
+## Timeline
 
 | Date | Milestone |
 |---|---|
@@ -507,8 +512,8 @@ moving get rebuilt, and there is no room to rebuild them.
 
 Sources to carry onto the final reference slide.
 
-- Dutang, C. and Charpentier, A. *CASdatasets*: Insurance datasets.
-  `pricingame` reference, French Institute of Actuaries Pricing Games.
+- Dutang, C. and Charpentier, A. *CASdatasets*: Insurance datasets. `pricingame`
+  reference, French Institute of Actuaries Pricing Games.
   <https://dutangc.github.io/CASdatasets/reference/pricingame.html>
 - Highway Loss Data Institute. Comparison of 2017-22 model year vehicles with and
   without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, 11 August 2026.
