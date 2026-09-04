@@ -12,7 +12,6 @@ author:
     email: qiwei.ye@mail.utoronto.ca
   - name: "Xiaoxiao Fan"
     email: xiaoxiao.fan@mail.utoronto.ca
-date: last-modified
 format:
   html:
     toc: true
@@ -39,7 +38,10 @@ Anything marked **fixed** should be treated as settled unless someone raises a
 substantive objection. Anything marked **open** is genuinely undecided and needs an
 owner.
 
-Presentation date: **9 September 2026, 18:00 EST**, first STA 2550 class.
+**Presentation: Monday 14 September 2026, 18:00 to 21:00, UY 9016.** This is the first
+STA 2550 session on the registrar timetable. An earlier email mentioned 9 September,
+but that falls on a Wednesday and STA 2550 meets on Mondays, so 14 September is the
+date to plan around.
 
 A note on numbering. This document numbers its own sections, and the presentation has
 five sections of its own. They are different things. Whenever this document refers to
@@ -86,9 +88,9 @@ that only one person can run.
 
 Status: **fixed**.
 
-Qiwei prepared a six-dataset public inventory on 21 August, scoring each candidate
-against eighteen variable categories required or useful for this simulation. That
-inventory drives the decision below, and it should be credited on the reference slide.
+Qiwei prepared a six-dataset public inventory, scoring each candidate against eighteen
+variable categories required or useful for this simulation. That inventory drives the
+decision below, and it should be credited on the reference slide.
 
 | Dataset | Coverage | Size | Score |
 |---|---|---|---|
@@ -262,7 +264,7 @@ guessing exercise.
 
 The Highway Loss Data Institute compared 2017-22 model year vehicles with and without
 a bundle of driver assistance features, holding the vehicle model otherwise constant.
-Matt Moore of IIHS-HLDI published the comparison on 11 August 2026. The findings:
+The findings:
 
 | Quantity | Effect for equipped vehicles |
 |---|---|
@@ -397,14 +399,11 @@ cover.
 
 | Presentation section | Owner | Needs |
 |---|---|---|
-| 1. Problem and decision | **open** | nothing, can start now |
+| 1. Problem and decision | Yufei (Faye) Wang | nothing, can start now |
 | 2. Key concepts | Hoyong Jung | nothing, can start now |
 | 3. Analysis and evidence | Qiwei Ye | the dataset and model spec above |
 | 4. Comparison and judgment | Daren Wang | outputs from presentation section 3 |
 | 5. Conclusion and limitations | Xiaoxiao Fan | the ground-up gap and limitations register |
-
-Presentation section 1 is unclaimed. Faye, it is yours if you want it, and it is the
-one with the fewest dependencies.
 
 ### A note for presentation sections 4 and 5
 
@@ -418,16 +417,29 @@ numbers. The comparison logic, which measures matter and why, and what would mak
 design preferable is all fixed by the contract designs section above. Draft it with
 placeholder numbers.
 
-**Section 5** can be drafted almost entirely from this document today. The limitations
+**Section 5** can be drafted almost entirely from this document. The limitations
 register below is the raw material, and it will not change when the simulation
 finishes.
 
+### Review
+
+Xiaoxiao has hands-on P&C experience and has agreed to review the modelling choices,
+mainly the frequency and severity distributions and the tail measures, and to add
+anything the limitations register is missing from a practitioner's point of view. This
+sits alongside presentation section 5 rather than on top of it.
+
+### Where things live
+
+Code and this specification live in the GitHub repository. Documents, slides, the
+brief and any other shared files live in the Google Drive folder that Faye set up.
+Nobody has to learn a new tool.
+
 ### One open role
 
-**Slide template owner: open.** The brief requires the template to be consistent across
-all slides. Five people building slides independently produces five decks and a bad
-evening on 8 September. Whoever takes this should push a template to the repo before
-anyone starts making slides.
+**Slide template owner.** Faye has offered to look for templates. The brief requires
+the template to be consistent across all slides, and five people building slides
+independently produces five decks and a bad evening right before the presentation.
+Whoever owns this should share a template before anyone starts making slides.
 
 ---
 
@@ -492,22 +504,6 @@ are choices we made rather than facts we looked up.
 
 ---
 
-## Timeline
-
-| Date | Milestone |
-|---|---|
-| Sun 31 Aug | Data loaded, distributions fitted, diagnostics agreed |
-| Wed 3 Sept | Simulation running, baseline and scenario results produced |
-| Fri 5 Sept | Analysis frozen. No new numbers after this point |
-| Sun 7 Sept | Slides merged into one template, first full run-through |
-| Tue 8 Sept | Final run-through with timing, question practice |
-| Wed 9 Sept | Presentation, 18:00 EST |
-
-The freeze on 5 September is the important one. Slides built on numbers that are still
-moving get rebuilt, and there is no room to rebuild them.
-
----
-
 ## References
 
 Sources to carry onto the final reference slide.
@@ -516,9 +512,9 @@ Sources to carry onto the final reference slide.
   reference, French Institute of Actuaries Pricing Games.
   <https://dutangc.github.io/CASdatasets/reference/pricingame.html>
 - Highway Loss Data Institute. Comparison of 2017-22 model year vehicles with and
-  without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, 11 August 2026.
+  without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, August 2026.
 - Highway Loss Data Institute. *Compendium of HLDI collision avoidance research*,
   Bulletin Vol. 40, No. 4, April 2023.
 - Ye, Q. *Public Insurance Dataset Candidates: Auto Deductible vs Coinsurance
-  Simulation.* Six-dataset inventory with variable availability matrix, 21 August 2026.
+  Simulation.* Six-dataset inventory with variable availability matrix.
 - MFI Refresher Group Presentation Project, Student Project Brief, Track 4.
