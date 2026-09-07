@@ -48,6 +48,50 @@ five sections of its own. They are different things. Whenever this document refe
 one of the five presentation sections it says so explicitly, for example "presentation
 section 4".
 
+### What changed in this revision, 7 September
+
+Nobody needs to reread the whole document. These are the substantive changes.
+
+**From the validation run (`results/data_processing.md`):**
+
+- **13.1% of claims are non-positive.** 597 negative and 2 zero out of 4,568. This is a
+  headline limitation, not a footnote. Cleaned claim count is 3,969 and $\lambda$ falls
+  about 13%. Limitation 8 rewritten.
+- **The supplied `ClaimNb` column must not be used** after cleaning. It reconciles to
+  the uncleaned 4,568. Rebuild counts from the cleaned claim table.
+- **The exposure mismatch has an explanation.** Supplied `Exposure` looks like
+  vehicle-years, `VehiclNb` times period length, rounded to 2dp. The validation check
+  omits `VehiclNb`, which is why it fires on 82,435 rows. One line confirms it.
+- **`SumInsured` is a banded category, not a number**, so $L$ takes a band edge rather
+  than a value read off the field.
+- **The train-only categorical levels are confirmed harmless**: train is the superset,
+  and we use no covariates.
+
+**Decisions and corrections:**
+
+- **Install path corrected**; `xts`/`zoo` were missing from the prerequisites.
+- **The data is four years, not one.** Limitation 6 rewritten.
+- **A policy row is a covered vehicle over a period, not a policy.** Do not merge or
+  split. The claim table is already one row per accident; do not aggregate it.
+- **Severity multiplier changed from 1.10 to 1.15.** The PDL severity figure exists in
+  the same HLDI source, so both multipliers now come from the coverage that matches
+  our data.
+- **Portfolio size fixed at 1,000 vehicles.**
+- **Per-claim limit $L$ now has a source and a robustness test**, after Xiaoxiao's
+  review.
+- **Simulation code corrected, and a Python translation note added.** Both negative
+  binomial parameters scale with portfolio size. In `scipy.stats.nbinom` terms, only
+  $n$ scales and $p$ does not.
+- **Three slides each, not four.** Four each did not fit the 20-slide cap.
+- **Assumptions split from limitations** between presentation sections 2 and 5.
+
+**Open, needs one person to run it:** the `DirectComp` cross-tab on the negative
+claims. If those are direct-compensation recoveries we can name the mechanism instead
+of calling 13% of the data anomalous.
+
+**Numbers freeze Wednesday 9 September.** Full run-through with timing and practice
+questions Saturday 12 September.
+
 ---
 
 ## Central question
@@ -130,14 +174,26 @@ we are following the evidence rather than the default.
 
 ### Loading
 
+The package is not on CRAN and the path in an earlier version of this document was
+stale. `xts` and `zoo` must be installed first or the load fails with an unhelpful
+error.
+
 ```{r}
 #| label: load-data
-install.packages("CASdatasets", repos = "http://cas.uqam.ca/pub/R/", type = "source")
+install.packages(c("xts", "zoo"))
+
+# Three mirrors, try in order. Large download, allow a few minutes.
+install.packages("CASdatasets",
+                 repos = "https://dutangc.perso.math.cnrs.fr/RRepository/pub/",
+                 type = "source")
+# or repos = "http://dutangc.free.fr/pub/RRepos/pub/"
+# or repos = "https://cas.uqam.ca/pub/"
+# last resort: devtools::install_github("dutangc/CASdatasets")
 
 library(CASdatasets)
 data(pricingame)
 
-pol   <- pg16trainpol    # 87,228 policies, exposure and risk characteristics
+pol   <- pg16trainpol    # 87,228 policy-period rows
 claim <- pg16trainclaim  # 4,568 claims, individual amounts
 
 str(pol)
@@ -149,6 +205,108 @@ anonymised for confidentiality, so they carry no interpretable meaning and shoul
 be used to tell a story about driver or vehicle type. And the join between the two
 tables is on the policy identifier, so policies with no claim will not appear in the
 claim table at all.
+
+### What a row actually is
+
+Status: **fixed**, settled against the data 6-7 September and confirmed by the
+validation run in `results/data_processing.md`.
+
+**The policy table is not one row per policy.** A row is one covered vehicle over one
+coverage period. A single `PolicyID` can appear several times: once per vehicle
+(`LicNb`) and once per period when cover is renewed or amended. Example from the data,
+`PolicyID` 3933 occupies four rows covering two vehicles across three years. The
+validation confirms `(PolicyID, LicNb, Year, BeginDate, EndDate)` is unique with zero
+duplicates, so that tuple is the row key.
+
+Leave those rows as they are. Do not merge them into one row per policy and do not
+split them further. The frequency model uses exposure as an offset, so the unit that
+matters is vehicle time on risk, not the count of policy numbers. Each row is one
+observation carrying its own exposure, and claims attach to the row they fall in.
+This is the standard vehicle-year construction.
+
+**The training data covers four years, not one.** A fifth year is held out as
+`pg16test` (32,772 rows), which we do not use. An earlier version of this document
+assumed a single year; that was wrong and the limitations register has been corrected.
+We pool all four years. The exposure offset already puts everything on an annual basis,
+so pooling still yields an annual $\lambda$ and gives us four times the data.
+
+**The claim table is already one row per accident.** `(PolicyID, LicNb, date)` is
+unique, so there are no two rows for the same vehicle on the same day and therefore no
+payment-level splitting to undo. Do not aggregate it. The validation also reconciles
+4,568 claim rows against `sum(ClaimNb) = 4,568` in the policy table, so the two tables
+agree before cleaning.
+
+### The exposure mismatch, resolved
+
+Status: **fixed**. This was Qiwei's original point 2 and it now has an explanation
+rather than a shrug.
+
+The validation flags 82,435 of 87,228 rows where the supplied `Exposure` differs from
+`(EndDate - BeginDate) / 365`, with 18,052 rows off by more than a rounding tolerance
+and a maximum gap of 0.166.
+
+Look at the largest discrepancies and the pattern is immediate:
+
+| PolicyID | Period | Days | From dates | Supplied | Ratio |
+|---|---|---:|---:|---:|---:|
+| 2954 | 2012-02-03 to 2012-04-03 | 60 | 0.164 | 0.33 | 2.01 |
+| 5515 | 2012-05-16 to 2012-06-17 | 32 | 0.088 | 0.18 | 2.05 |
+| 17983 (test) | 2014-01-01 to 2014-11-30 | 333 | 0.912 | 0.92 | 1.01 |
+
+**Supplied exposure is vehicle-years, not policy-years.** It appears to be
+`VehiclNb` times the period length, rounded to two decimals. The check in the pipeline
+computes only the period length, which is why it fires on every multi-vehicle row. The
+rounding to 2dp explains the remaining small differences: half a hundredth is 0.005,
+which is exactly the benchmark that 18,052 rows exceed, and those are the multi-vehicle
+ones.
+
+This is a hypothesis with strong support, not a verified fact. One line settles it:
+
+```python
+(pol["Exposure"] / (pol["VehiclNb"] * pol["ExposureFromDates"])).describe()
+```
+
+If that clusters at 1.0, the matter is closed. Either way **we keep the supplied
+`Exposure` column**, and if the hypothesis holds we can say why rather than saying we
+trusted the insurer's number. It also confirms the modelling choice above: the
+denominator we want is vehicle time on risk, and that is what the supplied column
+already measures.
+
+### Cleaning the claim amounts
+
+Status: **fixed in rule, one diagnostic outstanding**.
+
+The validation found **597 negative and 2 zero `ClaimCharge` values out of 4,568**.
+That is **13.1% of the claim table**, which is far more than the handful this document
+previously assumed. It is large enough to be a headline limitation rather than a
+footnote. See limitation 8.
+
+Lognormal and gamma need strictly positive support, so the 599 rows come out of the
+severity fit. Two consequences follow and neither is optional:
+
+1. **They come out of the claim counts as well.** After cleaning the count is 3,969,
+   not 4,568, so $\lambda$ falls by about 13%. The `ClaimNb` column in the policy table
+   currently reconciles to the uncleaned 4,568 and must be rebuilt by aggregating the
+   cleaned claim table back onto policy rows. Using the supplied `ClaimNb` alongside a
+   cleaned severity fit would mean the simulation draws 4,568 claims and assigns every
+   one a positive cost, which inflates the aggregate.
+2. **The drop is not random.** We are removing accidents on which the insurer ended up
+   net positive, so the surviving severity distribution is conditional on the insurer
+   having net paid. That pushes mean severity up while frequency goes down.
+
+**Outstanding diagnostic, and it is worth doing.** The claim table carries
+`DirectComp`, `CompRate` and `SettlYear`. Cross-tabulate the negative rows against
+`DirectComp` and `CompRate`. If the negatives concentrate in one `DirectComp`
+category, they are the recovery leg of direct compensation, which is a mechanism we can
+name on a slide instead of calling them anomalies. That turns 13% of dropped rows from
+an embarrassment into a finding.
+
+```python
+claims.assign(neg=claims["ClaimCharge"] < 0).groupby(["DirectComp", "CompRate"])["neg"].mean()
+```
+
+Record and report: rows in, rows out, how many zero, how many negative, and what the
+cross-tab shows.
 
 ---
 
@@ -213,8 +371,16 @@ heterogeneity.
 Fit both, report the dispersion statistic, and keep Poisson in the appendix. If the
 data turn out not to be overdispersed, we use Poisson and say so.
 
-Exposure enters as an offset, since policies are observed for varying fractions of a
-year.
+Exposure enters as an offset, since rows are observed for varying fractions of a year.
+With four years pooled, the offset is what converts everything back to an annual basis,
+so the fitted $\lambda$ is an annual claim rate per vehicle-year regardless of how many
+calendar years went in.
+
+One consequence of pooling worth stating if asked: the same policy contributes several
+rows, so the rows are not strictly independent. The negative binomial absorbs some of
+this, since repeat observations of one policy are exactly the unobserved heterogeneity
+the mixture is there to represent, but it is not a full panel treatment. See limitation
+6.
 
 ### Severity
 
@@ -236,21 +402,74 @@ common-shock structure between claims. Each of these was considered and dropped 
 scope; if asked, the answer is that the brief limits us to one main dataset and two
 principal methods, and that the question does not require them.
 
+### Implementation note: the pipeline is Python
+
+Status: **fixed**. The code blocks in this document are written in R because that is
+how the modelling decisions are usually expressed, but the actual pipeline is Python
+(`src/track_4/`, run with `uv run src/run_pipeline.py`, outputs to Parquet). The
+decisions are language-independent. One translation is not, and it is the one that can
+go wrong silently.
+
+**`rnbinom(mu, size)` has no direct Python equivalent.** Both
+`numpy.random.negative_binomial` and `scipy.stats.nbinom` use $(n, p)$. Convert with
+
+$$n = \theta, \qquad p = \frac{\theta}{\theta + \mu}$$
+
+where $\mu$ and $\theta$ are the fitted per-vehicle mean and dispersion. When scaling
+to a fleet of 1,000 vehicles, **only $n$ scales**. The probability $p$ is a ratio and
+both parameters scale together, so it is unchanged:
+
+```python
+from scipy.stats import nbinom
+p = theta / (theta + mu)
+N = nbinom.rvs(n = n_veh * theta, p = p, size = n_sims, random_state = seed)
+```
+
+Scaling $\mu$ while leaving $n$ at the per-vehicle value gives variance
+$n\mu + (n\mu)^2/\theta$, which is wrong by orders of magnitude and inflates every tail
+measure without producing any visible error. This is the same bug described in the
+contract designs section, in a different language.
+
+For the fits themselves, `statsmodels.discrete.discrete_model.NegativeBinomial` with an
+`exposure` argument replaces `glm.nb`, and `scipy.stats.lognorm.fit` /
+`scipy.stats.gamma.fit` replace `fitdist`. Compare by AIC as planned.
+
 ```{r}
 #| label: fit
+# Reference implementation. See the note above; the pipeline is Python.
 library(fitdistrplus)
 library(MASS)
 
-# Frequency
-fit_pois <- glm(ClaimNb ~ 1, offset = log(Exposure), family = poisson,  data = pol)
-fit_nb   <- glm.nb(ClaimNb ~ 1 + offset(log(Exposure)),                 data = pol)
+# One cleaned claim table drives BOTH the counts and the severity fit.
+claim_clean <- subset(claim, ClaimCharge > 0)   # drops 599 of 4,568 rows
+
+n_zero <- sum(claim$ClaimCharge == 0)   # 2
+n_neg  <- sum(claim$ClaimCharge <  0)   # 597, see limitation 8
+
+# Counts rebuilt from the cleaned claims. Do NOT use the supplied ClaimNb column,
+# which reconciles to the uncleaned 4,568.
+counts <- aggregate(list(ClaimNbClean = claim_clean$ClaimCharge),
+                    by  = list(PolicyID = claim_clean$PolicyID,
+                               LicNb    = claim_clean$LicNb),
+                    FUN = length)
+pol <- merge(pol, counts, by = c("PolicyID", "LicNb"), all.x = TRUE)
+pol$ClaimNbClean[is.na(pol$ClaimNbClean)] <- 0
+
+# Frequency. Exposure is vehicle-years and is used as supplied.
+fit_pois <- glm(ClaimNbClean ~ 1, offset = log(Exposure), family = poisson, data = pol)
+fit_nb   <- glm.nb(ClaimNbClean ~ 1 + offset(log(Exposure)),                 data = pol)
 
 # Severity
-fit_ln <- fitdist(claim$ClaimAmount, "lnorm")
-fit_ga <- fitdist(claim$ClaimAmount, "gamma")
+fit_ln <- fitdist(claim_clean$ClaimCharge, "lnorm")
+fit_ga <- fitdist(claim_clean$ClaimCharge, "gamma")
 
 gofstat(list(fit_ln, fit_ga))
 ```
+
+The claim table has no `LicNb`-level period, so the join above attaches a claim to a
+vehicle rather than to a specific coverage period. If a vehicle has several periods in
+the pool, decide whether to join on date range as well; with an intercept-only model
+this affects nothing, since the totals are the same either way, but say which you did.
 
 ---
 
@@ -270,7 +489,8 @@ The findings:
 |---|---|
 | Collision claim severity | about **10% higher** |
 | Collision claim frequency | about **10% lower** |
-| Property damage liability claim frequency | about **40% lower** |
+| **Property damage liability claim severity** | about **15% higher** |
+| **Property damage liability claim frequency** | about **40% lower** |
 | Overall collision losses | about **5% lower** |
 
 The mechanism is that sensors are expensive to replace and usually require calibration
@@ -279,13 +499,18 @@ afterwards, but equipped vehicles are in fewer crashes to begin with.
 ### Baseline scenario
 
 Our data are third-party material damage, so the property damage liability figures are
-the closer match.
+the closer match. **Both multipliers are taken from PDL coverage**, so they come from
+the same coverage in the same study rather than being mixed across coverages.
 
 - Frequency multiplier $\phi_N = 0.60$
-- Severity multiplier $\phi_X = 1.10$
+- Severity multiplier $\phi_X = 1.15$
 
 Applied as: $\lambda_{AV} = \phi_N \lambda$, and severity scaled by $\phi_X$ on the
 mean while holding the coefficient of variation constant.
+
+An earlier version of this document used $\phi_X = 1.10$, the collision figure, and
+then apologised for mixing coverages. The PDL severity figure exists in the same
+source; using it removes the mismatch.
 
 ### Sensitivity grid
 
@@ -294,17 +519,29 @@ a contour of the result. This is the single most valuable slide in the deck, bec
 converts our biggest weakness, dependence on assumed parameters, into the subject of
 the analysis.
 
-### Known weakness in this mapping
+### What the severity uplift actually measures
 
-**Open**, and someone should own writing two sentences on it.
+Status: **fixed**. Owned by presentation section 5.
 
-Property damage liability pays for damage to the *other* party's vehicle. Driver
-assistance on the insured vehicle reduces the frequency of causing such damage, but the
-severity of the repair applies to a third-party vehicle that may not be equipped.
-Applying a severity uplift derived from collision coverage to a liability portfolio is
-therefore an approximation. It is a reasonable one if the vehicle fleet as a whole is
-becoming equipped, which is the scenario we are describing, but it should be stated
-rather than hidden.
+Now that both multipliers come from PDL, the coverage mismatch is gone. Two things
+remain worth saying, and the second is more interesting than the one it replaces.
+
+**Country.** The multipliers are US experience; the data are French. Repair cost
+structures and liability rules differ. We keep this in the limitations register.
+
+**Mechanism.** HLDI notes that the PDL severity gap is larger than sensor replacement
+costs alone can explain, and attributes part of it to crash avoidance removing slower,
+low-cost crashes from the claim mix, which raises the average of what remains. That
+matters for how we apply the uplift. We scale the mean and hold the coefficient of
+variation constant, which implicitly treats the whole uplift as every loss inflating.
+If part of it is a mix shift, the left tail is being removed instead, which raises the
+mean **and lowers** the CV.
+
+The direction is worth stating because it is useful to us. A genuine mix shift removes
+exactly the small losses that a low deductible would newly pick up, so it works in
+favour of Design B. That runs opposite to the ground-up truncation bias in the section
+above, which favours Design A. The two partially offset, and being able to say so is a
+stronger answer than naming either bias alone.
 
 ---
 
@@ -323,7 +560,63 @@ the per-claim limit.
 |---|---|---|
 | Deductible $d$ | 1,000 | 250 |
 | Insurer share $\alpha$ | 1.00 | 0.80 |
-| Per-claim limit $L$ | same | same |
+| Per-claim limit $L$ | from a `SumInsured` band edge | same value |
+
+### Portfolio size
+
+Status: **fixed**. Simulate a fleet of **1,000 vehicles**, not the full 87,228 rows.
+
+This was previously unspecified and it is not a detail. At full portfolio size the
+aggregate diversifies, $\mathrm{TVaR}_{99}/E[S]$ sits close to 1, and the difference
+between the two designs disappears into rounding. A thousand-vehicle commercial fleet
+account keeps the tail a tail, and it matches the framing of the central question.
+State the number on the slide.
+
+### The per-claim limit
+
+Status: **fixed**. Raised by Xiaoxiao on 6 September.
+
+$L$ previously read "same" in both columns, which is not a value.
+
+**`SumInsured` is a banded category, not a number.** The validation lists levels such
+as `<=7.6 Keur`, so it cannot supply a precise $L$. It can still anchor one: take the
+upper edge of a high band as the limit and say that is where it came from, which is
+better than inventing a round figure. Fall back to the 99.5th percentile of the cleaned
+claim amounts if the bands turn out unusable, and say which you used. `Deduc` is
+banded the same way and is worth checking for a different reason: it tells us whether
+$d = 1{,}000$ and $d = 250$ sit inside the range of deductibles the portfolio actually
+sold, which is the check this dataset was chosen to make possible.
+
+$L$ caps the **insurer payment**, not the ground-up loss, which matters because
+$\alpha \neq 1$ in Design B.
+
+**A common $L$ is not a common effect.** Design A reaches the cap at a ground-up loss
+of $L + 1{,}000$; Design B reaches it at $1.25L + 250$. A hits the ceiling at a
+*smaller* loss, so A's tail is truncated first and A can look better on TVaR for a
+reason that has nothing to do with risk sharing. This runs against the structural
+expectation described below, so it has to be tested rather than assumed away.
+
+Two things settle it:
+
+1. Report the share of claims hitting the limit under each design. This is already in
+   the required outputs but was not being read as a diagnostic.
+2. **Run the whole comparison a second time with no limit at all.** If the ranking is
+   unchanged with and without, one line on the slide closes the question. If it
+   changes, that is the finding and we present it as such.
+
+### What we expect to find, and why we say so in advance
+
+A deductible subtracts a fixed amount, so its relief becomes negligible as losses grow.
+Coinsurance is proportional, so it keeps clipping the same share however far into the
+tail you go. At equal expected cost, Design B should therefore show the lower
+$\mathrm{TVaR}_{99}$ for any right-skewed severity. Only a binding limit changes that,
+which is what the test above is for.
+
+This is a mechanism we can explain at a whiteboard, not a discovery. Present it that
+way. It also means the sensitivity contour may not flip anywhere in the grid: check
+that on a coarse 4x4 run before building the slide, and if there is no flip, plot the
+ratio $\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)$, which varies, instead of a binary
+preference, which would be one solid colour.
 
 ### The calibration that makes the comparison fair
 
@@ -338,24 +631,48 @@ two designs distribute risk rather than how much they cost on average.
 Tune $d$ in Design A, or $\alpha$ in Design B, until expected aggregate cost matches
 within a small tolerance. Report the calibrated values and the tolerance achieved.
 
+**Both negative binomial parameters scale with portfolio size.** For $n$ independent
+vehicles each $\mathrm{NB}(\mu, \theta)$, the portfolio total is
+$\mathrm{NB}(n\mu,\; n\theta)$. Putting a portfolio-scale mean against a per-vehicle
+dispersion gives variance $n\mu + (n\mu)^2/\theta$, which is wrong by orders of
+magnitude and would silently inflate every tail measure. An earlier version of this
+code block had exactly that error.
+
 ```{r}
 #| label: payment
 insurer_payment <- function(x, d, alpha, limit) {
   pmin(alpha * pmax(x - d, 0), limit)
 }
 
-simulate_aggregate <- function(n_sims, lambda, size, sev_par, d, alpha, limit) {
-  vapply(seq_len(n_sims), function(i) {
-    n <- rnbinom(1, mu = lambda, size = size)
-    if (n == 0) return(0)
-    x <- rlnorm(n, sev_par$meanlog, sev_par$sdlog)
-    sum(insurer_payment(x, d, alpha, limit))
-  }, numeric(1))
+# rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),
+# so switching the fitted severity family is a one-line change.
+simulate_aggregate <- function(n_sims, n_veh, mu_veh, theta_veh,
+                               rsev, d, alpha, limit = Inf) {
+  N   <- rnbinom(n_sims, mu = n_veh * mu_veh, size = n_veh * theta_veh)
+  tot <- sum(N)
+  agg <- numeric(n_sims)
+  if (tot > 0) {
+    y   <- insurer_payment(rsev(tot), d, alpha, limit)
+    idx <- rep.int(seq_len(n_sims), N)
+    s   <- tapply(y, idx, sum)
+    agg[as.integer(names(s))] <- s     # sims with zero claims stay at 0
+  }
+  agg
+}
+
+tvar <- function(s, p = 0.99) mean(s[s >= quantile(s, p)])
+
+# Monte Carlo standard error on the tail measure
+tvar_se <- function(s, p = 0.99) {
+  tail <- s[s >= quantile(s, p)]
+  sd(tail) / sqrt(length(tail))
 }
 ```
 
-Use at least 100,000 simulations, set a seed, and report the Monte Carlo standard error
-on the tail measures. A tail estimate quoted without its own uncertainty invites an
+Set a seed and run **500,000 simulations**, not 100,000. At 100k only about 1,000
+draws sit above $\mathrm{VaR}_{99}$, so the standard error on $\mathrm{TVaR}_{99}$ is
+not negligible. Vectorised, 500k costs seconds. Report the standard error alongside
+every tail figure; a tail estimate quoted without its own uncertainty invites an
 obvious question.
 
 ---
@@ -379,12 +696,17 @@ Status: **fixed**. Every item below appears either on a slide or in the appendix
 **Truncation and censoring diagnostics** (required by the Track 4 brief):
 
 - Share of claims falling entirely below the deductible under each design
-- Share of claims hitting the limit
+- Share of claims hitting the limit, **reported separately for each design**
+- Rows dropped in cleaning: how many zero, how many negative
 - How each design changes what the insurer would observe in future data
 
 **Sensitivity:**
 
-- Contour of the design preference over the $(\phi_N, \phi_X)$ grid
+- Contour over the $(\phi_N, \phi_X)$ grid. Plot the ratio
+  $\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)$ rather than a binary preference unless
+  the coarse check shows the preference actually flips somewhere in the grid.
+- **Unlimited run.** The full comparison repeated with $L = \infty$, to show the
+  ranking is not an artefact of the common limit.
 
 Keep every figure legible from the back of a room. Two well-labelled charts beat six
 crowded ones, and the deck is capped at 20 slides including cover and figures.
@@ -394,8 +716,12 @@ crowded ones, and the deck is capped at 20 slides including cover and figures.
 ## Who owns what
 
 Five sections in the brief, five of us. Each person owns one presentation section and
-presents it, two to four minutes each, no more than four slides each excluding the
-cover.
+presents it, two to four minutes each.
+
+**Three slides each, maximum.** Four each would be 20 plus a cover plus a references
+slide, which is 22 against a cap of 20 including the cover. Three each gives 15, plus
+cover and references, for 17, and leaves room for the sensitivity figure to take a full
+slide.
 
 | Presentation section | Owner | Needs |
 |---|---|---|
@@ -421,6 +747,32 @@ placeholder numbers.
 register below is the raw material, and it will not change when the simulation
 finishes.
 
+### Splitting assumptions from limitations
+
+Status: **fixed**. Proposed by Xiaoxiao on 6 September, adopted with one change.
+
+The limitations register mixes two different things: assumptions any actuarial model
+would make, and assumptions whose violation moves our headline number in a direction we
+can name. Presentation section 2 takes the first kind, stated once and briefly, so that
+section 5 can go deeper on the second kind.
+
+The dividing test is whether a reader could say **which way** the assumption pushes our
+result.
+
+**To presentation section 2, as an assumptions slide:** no policyholder behaviour
+(a scope boundary, not a signed bias); multi-year pooling with no inflation adjustment;
+independence stated plainly as part of defining the collective risk model.
+
+**Staying with presentation section 5, as signed biases:** the ground-up gap; the
+country mismatch; driver assistance is not full automation; independence *again*, but
+as a directional bias rather than a definition, because correlated sensor or software
+failure makes the real aggregate tail fatter than what we report and therefore makes
+our TVaR optimistic; and expenses and recoveries, pending the count of negative claim
+rows.
+
+Section 2 defines the assumption; section 5 says what it costs us. Hoyong writes the
+section 2 version so it sets section 5 up rather than repeating it.
+
 ### Review
 
 Xiaoxiao has hands-on P&C experience and has agreed to review the modelling choices,
@@ -428,18 +780,25 @@ mainly the frequency and severity distributions and the tail measures, and to ad
 anything the limitations register is missing from a practitioner's point of view. This
 sits alongside presentation section 5 rather than on top of it.
 
+Her 6 September review produced the per-claim limit test now written into the contract
+designs section, and the assumptions split above. Both are adopted.
+
 ### Where things live
 
 Code and this specification live in the GitHub repository. Documents, slides, the
 brief and any other shared files live in the Google Drive folder that Faye set up.
 Nobody has to learn a new tool.
 
-### One open role
+### One shared deck
 
-**Slide template owner.** Faye has offered to look for templates. The brief requires
-the template to be consistent across all slides, and five people building slides
-independently produces five decks and a bad evening right before the presentation.
-Whoever owns this should share a template before anyone starts making slides.
+**Owner: Faye.** Not a design exercise. The point is not aesthetics, which carry no
+marks, but that five people building slides in five separate files produces a two-hour
+merge on the Sunday night before. One Google Slides file, link shared, everyone adds
+their own slides inside it. Whatever theme it opens with is fine. Needed before anyone
+starts building.
+
+Related: there are currently two Drive folders, Faye's and Qiwei's. Pick one and move
+everything into it.
 
 ---
 
@@ -470,16 +829,40 @@ hurt if a question landed on it.
 5. **Anonymised categorical levels.** Risk characteristics in this dataset have no
    published meaning, so we cannot segment or interpret by risk class.
 
-6. **Single year, single portfolio.** No trend, no inflation adjustment, no repair cost
-   index. Repair costs have been rising faster than general inflation, which would push
-   severity up further.
+6. **Four years pooled, no inflation adjustment.** An earlier version of this document
+   assumed a single year. The training data covers four, with a fifth held out as test
+   data that we do not use. We pool all four and let the exposure offset put frequency
+   on an annual basis, but we apply no trend or repair cost index to severity. Repair
+   costs have been rising faster than general inflation, so our fitted severity
+   understates current levels, and the understatement grows with the age of the
+   earliest year in the pool. Pooling also means one policy contributes several rows,
+   so the observations are not strictly independent across time; the negative binomial
+   absorbs part of this as unobserved heterogeneity but it is not a panel model.
 
 7. **No policyholder behaviour.** We compute retention mechanically. In reality a
    higher deductible changes reporting behaviour and lapse rates, which would feed back
    into both frequency and portfolio composition.
 
-8. **Expenses and recoveries excluded.** No claim handling expense, salvage, or
-   subrogation. All are absent from the public data, per Qiwei's inventory.
+8. **Amounts are net of recovery, and 13% of claims are dropped.** Claim handling
+   expense is absent from the data outright. Recoveries are not: the validation found
+   **597 negative and 2 zero `ClaimCharge` values out of 4,568, or 13.1%**. A negative
+   amount on a settled accident means the insurer recovered more than it paid, so the
+   figures are net of recovery rather than gross repair cost, and the fitted severity
+   describes the insurer's final net burden rather than the ground-up loss. The
+   likely mechanism is the recovery leg of direct compensation; the `DirectComp`
+   cross-tab described above will confirm or refute that before we present it.
+
+   Two effects, running opposite ways. Dropping the 599 removes accidents where the
+   insurer ended up net positive, so surviving severity is conditional on the insurer
+   having net paid and **mean severity is overstated**, while frequency falls about 13%
+   and **$\lambda$ is understated**. Net severity being smaller than gross also
+   understates severity in the other direction, which runs opposite to the truncation
+   bias in limitation 1.
+
+   The honest summary is that this moves the **levels** of $E[S]$ and the tail measures
+   more than it moves the **ranking** of the two designs, because both designs are fed
+   the same severity distribution. Our claim is a ranking, so it survives this better
+   than the absolute numbers do. Say that rather than pretending the effect is small.
 
 ---
 
@@ -511,8 +894,10 @@ Sources to carry onto the final reference slide.
 - Dutang, C. and Charpentier, A. *CASdatasets*: Insurance datasets. `pricingame`
   reference, French Institute of Actuaries Pricing Games.
   <https://dutangc.github.io/CASdatasets/reference/pricingame.html>
-- Highway Loss Data Institute. Comparison of 2017-22 model year vehicles with and
-  without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, August 2026.
+- Moore, M. (IIHS-HLDI), analysis published 11 August 2026, citing an HLDI comparison
+  of 2017-22 model year vehicles with and without a driver assistance bundle. Source of
+  both the collision figures and the property damage liability severity and frequency
+  figures used in our baseline.
 - Highway Loss Data Institute. *Compendium of HLDI collision avoidance research*,
   Bulletin Vol. 40, No. 4, April 2023.
 - Ye, Q. *Public Insurance Dataset Candidates: Auto Deductible vs Coinsurance
