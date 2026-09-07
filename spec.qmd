@@ -52,16 +52,26 @@ section 4".
 
 Nobody needs to reread the whole document. These are the substantive changes.
 
-**From the validation run (`results/data_processing.md`):**
+**From the validation run (`results/data_processing.md`) and the claim-table checks
+(`results/claim_table_checks.md`):**
 
-- **13.1% of claims are non-positive.** 597 negative and 2 zero out of 4,568. This is a
-  headline limitation, not a footnote. Cleaned claim count is 3,969 and $\lambda$ falls
-  about 13%. Limitation 8 rewritten.
+- **13.1% of claims are non-positive.** 597 negative and 2 zero out of 4,568. Cleaned
+  claim count is 3,969 and $\lambda$ falls about 13%. Limitation 8 rewritten.
+- **We do not know why they are negative.** Two explanations tested and both failed:
+  direct-compensation recoveries, and reserve movements on unsettled claims. Saying so
+  is stronger than guessing.
+- **The claim table is one row per accident, but the earlier reason was wrong.** The
+  date-uniqueness check had been run on the *policy* table. The claim table's date
+  combination is **not** unique. The real evidence is `ClaimNb`: 6 disagreements out of
+  4,244 groups.
+- **There is no accident date in the data.** The claim table's dates are the policy
+  period copied across, matching at 100%.
 - **The supplied `ClaimNb` column must not be used** after cleaning. It reconciles to
   the uncleaned 4,568. Rebuild counts from the cleaned claim table.
-- **The exposure mismatch has an explanation.** Supplied `Exposure` looks like
+- **The exposure mismatch has a likely explanation.** Supplied `Exposure` looks like
   vehicle-years, `VehiclNb` times period length, rounded to 2dp. The validation check
-  omits `VehiclNb`, which is why it fires on 82,435 rows. One line confirms it.
+  omits `VehiclNb`, which is why it fires on 82,435 rows. Not yet verified; one line
+  in the spec settles it.
 - **`SumInsured` is a banded category, not a number**, so $L$ takes a band edge rather
   than a value read off the field.
 - **The train-only categorical levels are confirmed harmless**: train is the superset,
@@ -85,12 +95,8 @@ Nobody needs to reread the whole document. These are the substantive changes.
 - **Three slides each, not four.** Four each did not fit the 20-slide cap.
 - **Assumptions split from limitations** between presentation sections 2 and 5.
 
-**Open, needs one person to run it:** the `DirectComp` cross-tab on the negative
-claims. If those are direct-compensation recoveries we can name the mechanism instead
-of calling 13% of the data anomalous.
-
-**Numbers freeze Wednesday 9 September.** Full run-through with timing and practice
-questions Saturday 12 September.
+**Numbers freeze target: Wednesday 9 September**, subject to Qiwei's timing. Full
+run-through with timing and practice questions Saturday 12 September.
 
 ---
 
@@ -230,11 +236,33 @@ assumed a single year; that was wrong and the limitations register has been corr
 We pool all four years. The exposure offset already puts everything on an annual basis,
 so pooling still yields an annual $\lambda$ and gives us four times the data.
 
-**The claim table is already one row per accident.** `(PolicyID, LicNb, date)` is
-unique, so there are no two rows for the same vehicle on the same day and therefore no
-payment-level splitting to undo. Do not aggregate it. The validation also reconciles
-4,568 claim rows against `sum(ClaimNb) = 4,568` in the policy table, so the two tables
-agree before cleaning.
+**The claim table is one row per accident.** Verified on 7 September and recorded in
+`results/claim_table_checks.md`.
+
+An earlier version of this document justified this by claiming
+`(PolicyID, LicNb, date)` is unique in the claim table. **That was wrong.** The
+uniqueness check it leaned on had been run on the *policy* table, and
+`(PolicyID, LicNb, Year, BeginDate, EndDate)` is in fact **not** unique in the claim
+table: 604 rows fall into 286 repeated groups.
+
+The correct justification is the insurer's own count. Grouping claim rows by
+`(PolicyID, LicNb, Year)` and comparing against `ClaimNb` on the matching policy
+sub-period, **6 groups out of 4,244 disagree and all by exactly one**. Totals reconcile
+at 4,568 = 4,568. If the repeated rows were split payments on a single accident,
+`ClaimNb` would sit *below* the row count by roughly the 318 surplus rows. It does not.
+The insurer is counting each claim row as a separate accident, so we do too, and we do
+not aggregate.
+
+`results/claim_table_checks.md` contains a line reading the duplicates as payment rows.
+Disregard it; it contradicts the reconciliation in the same document.
+
+**There is no accident date in the data.** `BeginDate` and `EndDate` in the claim table
+are the policy coverage period copied across from the policy row, matching at 100.00%
+on all 4,568 rows. Two accidents falling in the same coverage period are therefore
+indistinguishable from each other, which is why the date could never have settled this
+question. It does not matter for us: an intercept-only frequency model needs the count
+per exposure period, not the day each accident happened. Say this if asked what is
+missing from the data.
 
 ### The exposure mismatch, resolved
 
@@ -294,19 +322,25 @@ severity fit. Two consequences follow and neither is optional:
    net positive, so the surviving severity distribution is conditional on the insurer
    having net paid. That pushes mean severity up while frequency goes down.
 
-**Outstanding diagnostic, and it is worth doing.** The claim table carries
-`DirectComp`, `CompRate` and `SettlYear`. Cross-tabulate the negative rows against
-`DirectComp` and `CompRate`. If the negatives concentrate in one `DirectComp`
-category, they are the recovery leg of direct compensation, which is a mechanism we can
-name on a slide instead of calling them anomalies. That turns 13% of dropped rows from
-an embarrassment into a finding.
+**We do not know what the negatives are, and we tested two explanations that failed.**
 
-```python
-claims.assign(neg=claims["ClaimCharge"] < 0).groupby(["DirectComp", "CompRate"])["neg"].mean()
-```
+- *Direct compensation recoveries.* Ruled out. 570 of the 597 negatives sit at
+  `DirectComp = False` with `CompRate = 0`, which is the ordinary-claim category.
+  `CompRate = 100` contains 79 rows and **zero** negatives. The `DirectComp = True`
+  group does show a higher negative rate, 21% against 13%, but on 126 rows that is not
+  something to build an argument on.
+- *Reserve movements on unsettled claims.* Ruled out, and refuted rather than merely
+  unsupported. Only 41 rows carry `SettlYear = 0`, and **none of them are negative**.
+  Every one of the 597 negatives sits among the settled rows.
 
-Record and report: rows in, rows out, how many zero, how many negative, and what the
-cross-tab shows.
+So the rule stands but the mechanism is unexplained. Say exactly that. **"We ruled out
+recoveries and reserve movements, and the public file does not carry the transaction
+detail needed to identify the cause"** is a much stronger answer than calling them
+anomalies, and it converts directly into an answer to *what would you want before using
+this in practice*: claim transaction history, with payments separated from reserve
+movements.
+
+Record and report: rows in, rows out, how many zero, how many negative.
 
 ---
 
@@ -843,26 +877,28 @@ hurt if a question landed on it.
    higher deductible changes reporting behaviour and lapse rates, which would feed back
    into both frequency and portfolio composition.
 
-8. **Amounts are net of recovery, and 13% of claims are dropped.** Claim handling
-   expense is absent from the data outright. Recoveries are not: the validation found
-   **597 negative and 2 zero `ClaimCharge` values out of 4,568, or 13.1%**. A negative
-   amount on a settled accident means the insurer recovered more than it paid, so the
-   figures are net of recovery rather than gross repair cost, and the fitted severity
-   describes the insurer's final net burden rather than the ground-up loss. The
-   likely mechanism is the recovery leg of direct compensation; the `DirectComp`
-   cross-tab described above will confirm or refute that before we present it.
+8. **13% of claims are dropped and we cannot say why they are negative.** Claim
+   handling expense is absent from the data outright. Separately, the validation found
+   **597 negative and 2 zero `ClaimCharge` values out of 4,568, or 13.1%**, all of
+   which leave the severity fit because lognormal and gamma need positive support.
 
-   Two effects, running opposite ways. Dropping the 599 removes accidents where the
-   insurer ended up net positive, so surviving severity is conditional on the insurer
-   having net paid and **mean severity is overstated**, while frequency falls about 13%
-   and **$\lambda$ is understated**. Net severity being smaller than gross also
-   understates severity in the other direction, which runs opposite to the truncation
-   bias in limitation 1.
+   We tested two explanations and both failed. Direct-compensation recoveries: ruled
+   out, since 570 of the 597 sit in the ordinary-claim category and the highest
+   compensation-rate group has no negatives at all. Reserve movements on unsettled
+   claims: refuted, since only 41 rows are unsettled and none of those are negative.
+   The public file does not carry the transaction detail that would settle it.
 
-   The honest summary is that this moves the **levels** of $E[S]$ and the tail measures
-   more than it moves the **ranking** of the two designs, because both designs are fed
-   the same severity distribution. Our claim is a ranking, so it survives this better
-   than the absolute numbers do. Say that rather than pretending the effect is small.
+   What we can say about direction. Dropping the 599 removes accidents that closed at
+   or below zero for the insurer, so the surviving severity is conditional on the
+   insurer having net paid and **mean severity is overstated**, while the claim count
+   falls about 13% and **$\lambda$ is understated**. If the negatives are recoveries of
+   any kind, our amounts are net rather than gross and severity is understated on that
+   axis too, which runs opposite to the truncation bias in limitation 1.
+
+   This moves the **levels** of $E[S]$ and the tail measures more than it moves the
+   **ranking** of the two designs, since both designs are fed the same severity
+   distribution. Our claim is a ranking, so it survives this better than the absolute
+   figures do. Say that rather than pretending the effect is small.
 
 ---
 
@@ -881,6 +917,9 @@ section.
 - Why did you hold expected cost equal between the two designs?
 - What does TVaR at 99% mean in plain language?
 - What is missing from your data that you would want before using this in practice?
+  (Answer: ground-up losses; an accident date; and claim transaction history with
+  payments separated from reserve movements, which is what would explain the 13% of
+  negative amounts we had to drop.)
 
 The second, third and sixth are the ones most likely to catch someone out, because they
 are choices we made rather than facts we looked up.

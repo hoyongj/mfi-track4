@@ -2447,11 +2447,14 @@ window.Quarto = {
 <section id="what-changed-in-this-revision-7-september" class="level3" data-number="1.1">
 <h3 data-number="1.1" class="anchored" data-anchor-id="what-changed-in-this-revision-7-september"><span class="header-section-number">1.1</span> What changed in this revision, 7 September</h3>
 <p>Nobody needs to reread the whole document. These are the substantive changes.</p>
-<p><strong>From the validation run (<code>results/data_processing.md</code>):</strong></p>
+<p><strong>From the validation run (<code>results/data_processing.md</code>) and the claim-table checks (<code>results/claim_table_checks.md</code>):</strong></p>
 <ul>
-<li><strong>13.1% of claims are non-positive.</strong> 597 negative and 2 zero out of 4,568. This is a headline limitation, not a footnote. Cleaned claim count is 3,969 and <span class="math inline">\(\lambda\)</span> falls about 13%. Limitation 8 rewritten.</li>
+<li><strong>13.1% of claims are non-positive.</strong> 597 negative and 2 zero out of 4,568. Cleaned claim count is 3,969 and <span class="math inline">\(\lambda\)</span> falls about 13%. Limitation 8 rewritten.</li>
+<li><strong>We do not know why they are negative.</strong> Two explanations tested and both failed: direct-compensation recoveries, and reserve movements on unsettled claims. Saying so is stronger than guessing.</li>
+<li><strong>The claim table is one row per accident, but the earlier reason was wrong.</strong> The date-uniqueness check had been run on the <em>policy</em> table. The claim table’s date combination is <strong>not</strong> unique. The real evidence is <code>ClaimNb</code>: 6 disagreements out of 4,244 groups.</li>
+<li><strong>There is no accident date in the data.</strong> The claim table’s dates are the policy period copied across, matching at 100%.</li>
 <li><strong>The supplied <code>ClaimNb</code> column must not be used</strong> after cleaning. It reconciles to the uncleaned 4,568. Rebuild counts from the cleaned claim table.</li>
-<li><strong>The exposure mismatch has an explanation.</strong> Supplied <code>Exposure</code> looks like vehicle-years, <code>VehiclNb</code> times period length, rounded to 2dp. The validation check omits <code>VehiclNb</code>, which is why it fires on 82,435 rows. One line confirms it.</li>
+<li><strong>The exposure mismatch has a likely explanation.</strong> Supplied <code>Exposure</code> looks like vehicle-years, <code>VehiclNb</code> times period length, rounded to 2dp. The validation check omits <code>VehiclNb</code>, which is why it fires on 82,435 rows. Not yet verified; one line in the spec settles it.</li>
 <li><strong><code>SumInsured</code> is a banded category, not a number</strong>, so <span class="math inline">\(L\)</span> takes a band edge rather than a value read off the field.</li>
 <li><strong>The train-only categorical levels are confirmed harmless</strong>: train is the superset, and we use no covariates.</li>
 </ul>
@@ -2467,8 +2470,7 @@ window.Quarto = {
 <li><strong>Three slides each, not four.</strong> Four each did not fit the 20-slide cap.</li>
 <li><strong>Assumptions split from limitations</strong> between presentation sections 2 and 5.</li>
 </ul>
-<p><strong>Open, needs one person to run it:</strong> the <code>DirectComp</code> cross-tab on the negative claims. If those are direct-compensation recoveries we can name the mechanism instead of calling 13% of the data anomalous.</p>
-<p><strong>Numbers freeze Wednesday 9 September.</strong> Full run-through with timing and practice questions Saturday 12 September.</p>
+<p><strong>Numbers freeze target: Wednesday 9 September</strong>, subject to Qiwei’s timing. Full run-through with timing and practice questions Saturday 12 September.</p>
 <hr>
 </section>
 </section>
@@ -2612,7 +2614,11 @@ window.Quarto = {
 <p><strong>The policy table is not one row per policy.</strong> A row is one covered vehicle over one coverage period. A single <code>PolicyID</code> can appear several times: once per vehicle (<code>LicNb</code>) and once per period when cover is renewed or amended. Example from the data, <code>PolicyID</code> 3933 occupies four rows covering two vehicles across three years. The validation confirms <code>(PolicyID, LicNb, Year, BeginDate, EndDate)</code> is unique with zero duplicates, so that tuple is the row key.</p>
 <p>Leave those rows as they are. Do not merge them into one row per policy and do not split them further. The frequency model uses exposure as an offset, so the unit that matters is vehicle time on risk, not the count of policy numbers. Each row is one observation carrying its own exposure, and claims attach to the row they fall in. This is the standard vehicle-year construction.</p>
 <p><strong>The training data covers four years, not one.</strong> A fifth year is held out as <code>pg16test</code> (32,772 rows), which we do not use. An earlier version of this document assumed a single year; that was wrong and the limitations register has been corrected. We pool all four years. The exposure offset already puts everything on an annual basis, so pooling still yields an annual <span class="math inline">\(\lambda\)</span> and gives us four times the data.</p>
-<p><strong>The claim table is already one row per accident.</strong> <code>(PolicyID, LicNb, date)</code> is unique, so there are no two rows for the same vehicle on the same day and therefore no payment-level splitting to undo. Do not aggregate it. The validation also reconciles 4,568 claim rows against <code>sum(ClaimNb) = 4,568</code> in the policy table, so the two tables agree before cleaning.</p>
+<p><strong>The claim table is one row per accident.</strong> Verified on 7 September and recorded in <code>results/claim_table_checks.md</code>.</p>
+<p>An earlier version of this document justified this by claiming <code>(PolicyID, LicNb, date)</code> is unique in the claim table. <strong>That was wrong.</strong> The uniqueness check it leaned on had been run on the <em>policy</em> table, and <code>(PolicyID, LicNb, Year, BeginDate, EndDate)</code> is in fact <strong>not</strong> unique in the claim table: 604 rows fall into 286 repeated groups.</p>
+<p>The correct justification is the insurer’s own count. Grouping claim rows by <code>(PolicyID, LicNb, Year)</code> and comparing against <code>ClaimNb</code> on the matching policy sub-period, <strong>6 groups out of 4,244 disagree and all by exactly one</strong>. Totals reconcile at 4,568 = 4,568. If the repeated rows were split payments on a single accident, <code>ClaimNb</code> would sit <em>below</em> the row count by roughly the 318 surplus rows. It does not. The insurer is counting each claim row as a separate accident, so we do too, and we do not aggregate.</p>
+<p><code>results/claim_table_checks.md</code> contains a line reading the duplicates as payment rows. Disregard it; it contradicts the reconciliation in the same document.</p>
+<p><strong>There is no accident date in the data.</strong> <code>BeginDate</code> and <code>EndDate</code> in the claim table are the policy coverage period copied across from the policy row, matching at 100.00% on all 4,568 rows. Two accidents falling in the same coverage period are therefore indistinguishable from each other, which is why the date could never have settled this question. It does not matter for us: an intercept-only frequency model needs the count per exposure period, not the day each accident happened. Say this if asked what is missing from the data.</p>
 </section>
 <section id="the-exposure-mismatch-resolved" class="level3" data-number="3.5">
 <h3 data-number="3.5" class="anchored" data-anchor-id="the-exposure-mismatch-resolved"><span class="header-section-number">3.5</span> The exposure mismatch, resolved</h3>
@@ -2671,9 +2677,13 @@ window.Quarto = {
 <li><strong>They come out of the claim counts as well.</strong> After cleaning the count is 3,969, not 4,568, so <span class="math inline">\(\lambda\)</span> falls by about 13%. The <code>ClaimNb</code> column in the policy table currently reconciles to the uncleaned 4,568 and must be rebuilt by aggregating the cleaned claim table back onto policy rows. Using the supplied <code>ClaimNb</code> alongside a cleaned severity fit would mean the simulation draws 4,568 claims and assigns every one a positive cost, which inflates the aggregate.</li>
 <li><strong>The drop is not random.</strong> We are removing accidents on which the insurer ended up net positive, so the surviving severity distribution is conditional on the insurer having net paid. That pushes mean severity up while frequency goes down.</li>
 </ol>
-<p><strong>Outstanding diagnostic, and it is worth doing.</strong> The claim table carries <code>DirectComp</code>, <code>CompRate</code> and <code>SettlYear</code>. Cross-tabulate the negative rows against <code>DirectComp</code> and <code>CompRate</code>. If the negatives concentrate in one <code>DirectComp</code> category, they are the recovery leg of direct compensation, which is a mechanism we can name on a slide instead of calling them anomalies. That turns 13% of dropped rows from an embarrassment into a finding.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>claims.assign(neg<span class="op">=</span>claims[<span class="st">&quot;ClaimCharge&quot;</span>] <span class="op">&lt;</span> <span class="dv">0</span>).groupby([<span class="st">&quot;DirectComp&quot;</span>, <span class="st">&quot;CompRate&quot;</span>])[<span class="st">&quot;neg&quot;</span>].mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Record and report: rows in, rows out, how many zero, how many negative, and what the cross-tab shows.</p>
+<p><strong>We do not know what the negatives are, and we tested two explanations that failed.</strong></p>
+<ul>
+<li><em>Direct compensation recoveries.</em> Ruled out. 570 of the 597 negatives sit at <code>DirectComp = False</code> with <code>CompRate = 0</code>, which is the ordinary-claim category. <code>CompRate = 100</code> contains 79 rows and <strong>zero</strong> negatives. The <code>DirectComp = True</code> group does show a higher negative rate, 21% against 13%, but on 126 rows that is not something to build an argument on.</li>
+<li><em>Reserve movements on unsettled claims.</em> Ruled out, and refuted rather than merely unsupported. Only 41 rows carry <code>SettlYear = 0</code>, and <strong>none of them are negative</strong>. Every one of the 597 negatives sits among the settled rows.</li>
+</ul>
+<p>So the rule stands but the mechanism is unexplained. Say exactly that. <strong>“We ruled out recoveries and reserve movements, and the public file does not carry the transaction detail needed to identify the cause”</strong> is a much stronger answer than calling them anomalies, and it converts directly into an answer to <em>what would you want before using this in practice</em>: claim transaction history, with payments separated from reserve movements.</p>
+<p>Record and report: rows in, rows out, how many zero, how many negative.</p>
 <hr>
 </section>
 </section>
@@ -2723,42 +2733,42 @@ window.Quarto = {
 <p><strong><code>rnbinom(mu, size)</code> has no direct Python equivalent.</strong> Both <code>numpy.random.negative_binomial</code> and <code>scipy.stats.nbinom</code> use <span class="math inline">\((n, p)\)</span>. Convert with</p>
 <p><span class="math display">\[n = \theta, \qquad p = \frac{\theta}{\theta + \mu}\]</span></p>
 <p>where <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\theta\)</span> are the fitted per-vehicle mean and dispersion. When scaling to a fleet of 1,000 vehicles, <strong>only <span class="math inline">\(n\)</span> scales</strong>. The probability <span class="math inline">\(p\)</span> is a ratio and both parameters scale together, so it is unchanged:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> nbinom</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> theta <span class="op">/</span> (theta <span class="op">+</span> mu)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> nbinom.rvs(n <span class="op">=</span> n_veh <span class="op">*</span> theta, p <span class="op">=</span> p, size <span class="op">=</span> n_sims, random_state <span class="op">=</span> seed)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> nbinom</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> theta <span class="op">/</span> (theta <span class="op">+</span> mu)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> nbinom.rvs(n <span class="op">=</span> n_veh <span class="op">*</span> theta, p <span class="op">=</span> p, size <span class="op">=</span> n_sims, random_state <span class="op">=</span> seed)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Scaling <span class="math inline">\(\mu\)</span> while leaving <span class="math inline">\(n\)</span> at the per-vehicle value gives variance <span class="math inline">\(n\mu + (n\mu)^2/\theta\)</span>, which is wrong by orders of magnitude and inflates every tail measure without producing any visible error. This is the same bug described in the contract designs section, in a different language.</p>
 <p>For the fits themselves, <code>statsmodels.discrete.discrete_model.NegativeBinomial</code> with an <code>exposure</code> argument replaces <code>glm.nb</code>, and <code>scipy.stats.lognorm.fit</code> / <code>scipy.stats.gamma.fit</code> replace <code>fitdist</code>. Compare by AIC as planned.</p>
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reference implementation. See the note above; the pipeline is Python.</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># One cleaned claim table drives BOTH the counts and the severity fit.</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>claim_clean <span class="ot">&lt;-</span> <span class="fu">subset</span>(claim, ClaimCharge <span class="sc">&gt;</span> <span class="dv">0</span>)   <span class="co"># drops 599 of 4,568 rows</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>n_zero <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">==</span> <span class="dv">0</span>)   <span class="co"># 2</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>n_neg  <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">&lt;</span>  <span class="dv">0</span>)   <span class="co"># 597, see limitation 8</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Counts rebuilt from the cleaned claims. Do NOT use the supplied ClaimNb column,</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># which reconciles to the uncleaned 4,568.</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">aggregate</span>(<span class="fu">list</span>(<span class="at">ClaimNbClean =</span> claim_clean<span class="sc">$</span>ClaimCharge),</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>                    <span class="at">by  =</span> <span class="fu">list</span>(<span class="at">PolicyID =</span> claim_clean<span class="sc">$</span>PolicyID,</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>                               <span class="at">LicNb    =</span> claim_clean<span class="sc">$</span>LicNb),</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>                    <span class="at">FUN =</span> length)</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>pol <span class="ot">&lt;-</span> <span class="fu">merge</span>(pol, counts, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;PolicyID&quot;</span>, <span class="st">&quot;LicNb&quot;</span>), <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>pol<span class="sc">$</span>ClaimNbClean[<span class="fu">is.na</span>(pol<span class="sc">$</span>ClaimNbClean)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Frequency. Exposure is vehicle-years and is used as supplied.</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>fit_pois <span class="ot">&lt;-</span> <span class="fu">glm</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span>, <span class="at">offset =</span> <span class="fu">log</span>(Exposure), <span class="at">family =</span> poisson, <span class="at">data =</span> pol)</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>fit_nb   <span class="ot">&lt;-</span> <span class="fu">glm.nb</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(Exposure)),                 <span class="at">data =</span> pol)</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Severity</span></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>fit_ln <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;lnorm&quot;</span>)</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>fit_ga <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;gamma&quot;</span>)</span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="fu">gofstat</span>(<span class="fu">list</span>(fit_ln, fit_ga))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reference implementation. See the note above; the pipeline is Python.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># One cleaned claim table drives BOTH the counts and the severity fit.</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>claim_clean <span class="ot">&lt;-</span> <span class="fu">subset</span>(claim, ClaimCharge <span class="sc">&gt;</span> <span class="dv">0</span>)   <span class="co"># drops 599 of 4,568 rows</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>n_zero <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">==</span> <span class="dv">0</span>)   <span class="co"># 2</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>n_neg  <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">&lt;</span>  <span class="dv">0</span>)   <span class="co"># 597, see limitation 8</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Counts rebuilt from the cleaned claims. Do NOT use the supplied ClaimNb column,</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># which reconciles to the uncleaned 4,568.</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">aggregate</span>(<span class="fu">list</span>(<span class="at">ClaimNbClean =</span> claim_clean<span class="sc">$</span>ClaimCharge),</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                    <span class="at">by  =</span> <span class="fu">list</span>(<span class="at">PolicyID =</span> claim_clean<span class="sc">$</span>PolicyID,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                               <span class="at">LicNb    =</span> claim_clean<span class="sc">$</span>LicNb),</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                    <span class="at">FUN =</span> length)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>pol <span class="ot">&lt;-</span> <span class="fu">merge</span>(pol, counts, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;PolicyID&quot;</span>, <span class="st">&quot;LicNb&quot;</span>), <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>pol<span class="sc">$</span>ClaimNbClean[<span class="fu">is.na</span>(pol<span class="sc">$</span>ClaimNbClean)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Frequency. Exposure is vehicle-years and is used as supplied.</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>fit_pois <span class="ot">&lt;-</span> <span class="fu">glm</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span>, <span class="at">offset =</span> <span class="fu">log</span>(Exposure), <span class="at">family =</span> poisson, <span class="at">data =</span> pol)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>fit_nb   <span class="ot">&lt;-</span> <span class="fu">glm.nb</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(Exposure)),                 <span class="at">data =</span> pol)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Severity</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>fit_ln <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;lnorm&quot;</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>fit_ga <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;gamma&quot;</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="fu">gofstat</span>(<span class="fu">list</span>(fit_ln, fit_ga))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The claim table has no <code>LicNb</code>-level period, so the join above attaches a claim to a vehicle rather than to a specific coverage period. If a vehicle has several periods in the pool, decide whether to join on date range as well; with an intercept-only model this affects nothing, since the totals are the same either way, but say which you did.</p>
@@ -2889,33 +2899,33 @@ window.Quarto = {
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha, limit) {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>), limit)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># so switching the fitted severity family is a one-line change.</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>simulate_aggregate <span class="ot">&lt;-</span> <span class="cf">function</span>(n_sims, n_veh, mu_veh, theta_veh,</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                               rsev, d, alpha, <span class="at">limit =</span> <span class="cn">Inf</span>) {</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  N   <span class="ot">&lt;-</span> <span class="fu">rnbinom</span>(n_sims, <span class="at">mu =</span> n_veh <span class="sc">*</span> mu_veh, <span class="at">size =</span> n_veh <span class="sc">*</span> theta_veh)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  tot <span class="ot">&lt;-</span> <span class="fu">sum</span>(N)</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  agg <span class="ot">&lt;-</span> <span class="fu">numeric</span>(n_sims)</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (tot <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    y   <span class="ot">&lt;-</span> <span class="fu">insurer_payment</span>(<span class="fu">rsev</span>(tot), d, alpha, limit)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">rep.int</span>(<span class="fu">seq_len</span>(n_sims), N)</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    s   <span class="ot">&lt;-</span> <span class="fu">tapply</span>(y, idx, sum)</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    agg[<span class="fu">as.integer</span>(<span class="fu">names</span>(s))] <span class="ot">&lt;-</span> s     <span class="co"># sims with zero claims stay at 0</span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  agg</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>tvar <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) <span class="fu">mean</span>(s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)])</span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Monte Carlo standard error on the tail measure</span></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>tvar_se <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) {</span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  tail <span class="ot">&lt;-</span> s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)]</span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sd</span>(tail) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">length</span>(tail))</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha, limit) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>), limit)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># so switching the fitted severity family is a one-line change.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>simulate_aggregate <span class="ot">&lt;-</span> <span class="cf">function</span>(n_sims, n_veh, mu_veh, theta_veh,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                               rsev, d, alpha, <span class="at">limit =</span> <span class="cn">Inf</span>) {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  N   <span class="ot">&lt;-</span> <span class="fu">rnbinom</span>(n_sims, <span class="at">mu =</span> n_veh <span class="sc">*</span> mu_veh, <span class="at">size =</span> n_veh <span class="sc">*</span> theta_veh)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  tot <span class="ot">&lt;-</span> <span class="fu">sum</span>(N)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  agg <span class="ot">&lt;-</span> <span class="fu">numeric</span>(n_sims)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (tot <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    y   <span class="ot">&lt;-</span> <span class="fu">insurer_payment</span>(<span class="fu">rsev</span>(tot), d, alpha, limit)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">rep.int</span>(<span class="fu">seq_len</span>(n_sims), N)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    s   <span class="ot">&lt;-</span> <span class="fu">tapply</span>(y, idx, sum)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    agg[<span class="fu">as.integer</span>(<span class="fu">names</span>(s))] <span class="ot">&lt;-</span> s     <span class="co"># sims with zero claims stay at 0</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  agg</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>tvar <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) <span class="fu">mean</span>(s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)])</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Monte Carlo standard error on the tail measure</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>tvar_se <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) {</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  tail <span class="ot">&lt;-</span> s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)]</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sd</span>(tail) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">length</span>(tail))</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Set a seed and run <strong>500,000 simulations</strong>, not 100,000. At 100k only about 1,000 draws sit above <span class="math inline">\(\mathrm{VaR}_{99}\)</span>, so the standard error on <span class="math inline">\(\mathrm{TVaR}_{99}\)</span> is not negligible. Vectorised, 500k costs seconds. Report the standard error alongside every tail figure; a tail estimate quoted without its own uncertainty invites an obvious question.</p>
@@ -3040,9 +3050,10 @@ window.Quarto = {
 <li><p><strong>Anonymised categorical levels.</strong> Risk characteristics in this dataset have no published meaning, so we cannot segment or interpret by risk class.</p></li>
 <li><p><strong>Four years pooled, no inflation adjustment.</strong> An earlier version of this document assumed a single year. The training data covers four, with a fifth held out as test data that we do not use. We pool all four and let the exposure offset put frequency on an annual basis, but we apply no trend or repair cost index to severity. Repair costs have been rising faster than general inflation, so our fitted severity understates current levels, and the understatement grows with the age of the earliest year in the pool. Pooling also means one policy contributes several rows, so the observations are not strictly independent across time; the negative binomial absorbs part of this as unobserved heterogeneity but it is not a panel model.</p></li>
 <li><p><strong>No policyholder behaviour.</strong> We compute retention mechanically. In reality a higher deductible changes reporting behaviour and lapse rates, which would feed back into both frequency and portfolio composition.</p></li>
-<li><p><strong>Amounts are net of recovery, and 13% of claims are dropped.</strong> Claim handling expense is absent from the data outright. Recoveries are not: the validation found <strong>597 negative and 2 zero <code>ClaimCharge</code> values out of 4,568, or 13.1%</strong>. A negative amount on a settled accident means the insurer recovered more than it paid, so the figures are net of recovery rather than gross repair cost, and the fitted severity describes the insurer’s final net burden rather than the ground-up loss. The likely mechanism is the recovery leg of direct compensation; the <code>DirectComp</code> cross-tab described above will confirm or refute that before we present it.</p>
-<p>Two effects, running opposite ways. Dropping the 599 removes accidents where the insurer ended up net positive, so surviving severity is conditional on the insurer having net paid and <strong>mean severity is overstated</strong>, while frequency falls about 13% and <strong><span class="math inline">\(\lambda\)</span> is understated</strong>. Net severity being smaller than gross also understates severity in the other direction, which runs opposite to the truncation bias in limitation 1.</p>
-<p>The honest summary is that this moves the <strong>levels</strong> of <span class="math inline">\(E[S]\)</span> and the tail measures more than it moves the <strong>ranking</strong> of the two designs, because both designs are fed the same severity distribution. Our claim is a ranking, so it survives this better than the absolute numbers do. Say that rather than pretending the effect is small.</p></li>
+<li><p><strong>13% of claims are dropped and we cannot say why they are negative.</strong> Claim handling expense is absent from the data outright. Separately, the validation found <strong>597 negative and 2 zero <code>ClaimCharge</code> values out of 4,568, or 13.1%</strong>, all of which leave the severity fit because lognormal and gamma need positive support.</p>
+<p>We tested two explanations and both failed. Direct-compensation recoveries: ruled out, since 570 of the 597 sit in the ordinary-claim category and the highest compensation-rate group has no negatives at all. Reserve movements on unsettled claims: refuted, since only 41 rows are unsettled and none of those are negative. The public file does not carry the transaction detail that would settle it.</p>
+<p>What we can say about direction. Dropping the 599 removes accidents that closed at or below zero for the insurer, so the surviving severity is conditional on the insurer having net paid and <strong>mean severity is overstated</strong>, while the claim count falls about 13% and <strong><span class="math inline">\(\lambda\)</span> is understated</strong>. If the negatives are recoveries of any kind, our amounts are net rather than gross and severity is understated on that axis too, which runs opposite to the truncation bias in limitation 1.</p>
+<p>This moves the <strong>levels</strong> of <span class="math inline">\(E[S]\)</span> and the tail measures more than it moves the <strong>ranking</strong> of the two designs, since both designs are fed the same severity distribution. Our claim is a ranking, so it survives this better than the absolute figures do. Say that rather than pretending the effect is small.</p></li>
 </ol>
 <hr>
 </section>
@@ -3057,7 +3068,7 @@ window.Quarto = {
 <li>What is the most important assumption, and which way does it bias the result?</li>
 <li>Why did you hold expected cost equal between the two designs?</li>
 <li>What does TVaR at 99% mean in plain language?</li>
-<li>What is missing from your data that you would want before using this in practice?</li>
+<li>What is missing from your data that you would want before using this in practice? (Answer: ground-up losses; an accident date; and claim transaction history with payments separated from reserve movements, which is what would explain the 13% of negative amounts we had to drop.)</li>
 </ul>
 <p>The second, third and sixth are the ones most likely to catch someone out, because they are choices we made rather than facts we looked up.</p>
 <hr>
