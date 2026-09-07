@@ -324,3 +324,8 @@ pd.crosstab(claim['CompRate'], claim['_neg'])
 claim['Year'].min(), claim['Year'].max()     # 2011, 2013
 policy['Year'].min(), policy['Year'].max()   # 2011, 2013
 ```
+
+
+> Superseded. The CASdatasets documentation states that negative amounts are
+> claims where the insured was not at fault, recovered through legal recourse.
+> Both hypotheses below were wrong; kept for the record.
