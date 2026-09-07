@@ -9,6 +9,26 @@ and liability/recourse explanation, official variable meanings, types, and pipel
 validation. This report preserves the three original questions below, with answers
 updated for the cleaned claims. Re-run the code below when processed outputs change.
 
+## Negative-charge correction
+
+The correction from commit [`623817f`](https://github.com/hoyongj/mfi-track4/commit/623817ff71c7ab3833c9b0f3b1c555e92b499859)
+(`fixed the hypothesis`) is retained: negative amounts concern claims where the
+insured driver is not liable and recovery proceeds through legal recourse.
+The two earlier hypotheses are superseded and retained here only for the record:
+
+| Earlier hypothesis | Correction |
+|---|---|
+| Negative charges are explained by direct-compensation recoveries identified through DirectComp/CompRate. | Those indicators alone do not establish all cases of legal recourse. The earlier cross-tabs do not rule out the retained recourse explanation. |
+| Negative charges are reserve movements on unsettled claims, with SettlYear=0 used to identify them. | This explanation is superseded. The meaning of SettlYear=0 is undocumented, so the assumed settled/unsettled classification is not used. |
+
+Source scope: the [CASdatasets reference](https://dutangc.github.io/CASdatasets/reference/pricingame.html#format)
+explicitly gives the recourse explanation for negative `claim_amount` in its PG17
+section. Its PG16 `ClaimCharge` entry does not explain the sign. Applying the
+explanation to these PG16 files is the interpretation adopted by the commit;
+the project instruction also applies it to zero charges. The
+[processing choices](data_processing.md#processing-choices) record the resulting
+filter and preservation of policy rows and supplied ClaimNb.
+
 ## Question 1: What do BeginDate/EndDate mean in the claim table?
 
 They are the start and end dates of the associated policy coverage period. Use
@@ -58,9 +78,8 @@ each key. After cleaning, retained claim counts are lower because negative and
 zero charges were excluded. The corresponding policy rows and supplied ClaimNb
 values remain unchanged.
 
-The [processing choices](data_processing.md#processing-choices) record the project
-explanation: these nonpositive charges concern claims where the insured driver is
-not liable and legal recourse applies.
+This comparison follows the [retained correction](#negative-charge-correction)
+and the [processing choices](data_processing.md#processing-choices).
 
 A read-only check also confirms exact reconciliation before filtering at the
 full five-field coverage key. At that finer level, compare retained claim counts
