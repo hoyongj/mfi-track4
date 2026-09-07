@@ -534,6 +534,10 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         "# Data processing", "",
         f"Result: {failures} failed checks; {warnings} warnings. {output_status}",
         "", "Run from the project folder: `uv run src/run_pipeline.py`.", "",
+        "This generated report records input validation, cleaning rules, variable meanings, and output checks. "
+        "Further analysis of coverage-period linkage and claim counts after filtering is in "
+        "[claim_table_checks.md](claim_table_checks.md).",
+        "",
         "## Validation", "", "| Check | Status | Finding |", "|---|---|---|",
     ]
     lines.extend(f"| {_cell(check.name)} | {check.status} | {_cell(check.detail)} |" for check in result.checks)
@@ -558,6 +562,9 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         f"Policy uniqueness is checked on ({', '.join(POLICY_KEY_COLUMNS)}) separately in the training and test policy tables. "
         f"Claim uniqueness is checked on ({', '.join(CLAIM_KEY_COLUMNS)}) before and after filtering. "
         "Incomplete keys are reported as uncheckable. Duplicate combinations are flagged without deduplication.",
+        "",
+        "Project interpretation: negative or zero claim charges reflect claims where the insured driver is not liable "
+        "and legal recourse applies.",
         "",
         "Claim rows with ClaimCharge <= 0 are removed from clean_train_claim. "
         "Claim relationship and count reconciliation checks use the input claims before removal. "

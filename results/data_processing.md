@@ -4,6 +4,8 @@ Result: 0 failed checks; 4 warnings. Three separate Parquet tables saved.
 
 Run from the project folder: `uv run src/run_pipeline.py`.
 
+This generated report records input validation, cleaning rules, variable meanings, and output checks. Further analysis of coverage-period linkage and claim counts after filtering is in [claim_table_checks.md](claim_table_checks.md).
+
 ## Validation
 
 | Check | Status | Finding |
@@ -45,6 +47,8 @@ Policy category labels use shared unordered categories, including VehiclPower (P
 ExposureMismatch flags abs(Exposure - (EndDate - BeginDate) / 365) > 1e-08 with no relative tolerance. The 0.005 comparison is a separate rounding benchmark, not an exemption. ExposureFromDates stores the date calculation; ExposureDifference stores supplied minus calculated exposure. An uncheckable row has a missing flag. All three diagnostic columns appear in both policy outputs.
 
 Policy uniqueness is checked on (PolicyID, LicNb, Year, BeginDate, EndDate) separately in the training and test policy tables. Claim uniqueness is checked on (PolicyID, LicNb, Year, BeginDate, EndDate, SettlYear, ClaimCharge) before and after filtering. Incomplete keys are reported as uncheckable. Duplicate combinations are flagged without deduplication.
+
+Project interpretation: negative or zero claim charges reflect claims where the insured driver is not liable and legal recourse applies.
 
 Claim rows with ClaimCharge <= 0 are removed from clean_train_claim. Claim relationship and count reconciliation checks use the input claims before removal. Policy ClaimNb retains its supplied counts, so the filtered claim row count is lower by the number removed. Missing charges are retained and reported. Policy rows and raw files are preserved; tables are not joined or concatenated, and missing values are not imputed. FAIL prevents export; WARN records findings for review.
 
