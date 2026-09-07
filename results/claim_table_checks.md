@@ -158,3 +158,8 @@ print('Short-key groups / count differences / total gap:',
       len(short_expected), int(short_gap.ne(0).sum()), int(short_gap.sum()))
 '@ | uv run --with 'pandas==3.0.5' --with 'rdata==1.1.0' --with 'pyarrow==25.0.1' python -B -
 ```
+
+
+> Superseded. The CASdatasets documentation states that negative amounts are
+> claims where the insured was not at fault, recovered through legal recourse.
+> Both hypotheses below were wrong; kept for the record.
