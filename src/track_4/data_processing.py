@@ -1,8 +1,9 @@
 """Load, type, validate, and save the three separate Pricing Game 2016 tables.
 
 Schema reference: https://dutangc.github.io/CASdatasets/reference/pricingame.html
-No rows are joined, concatenated, dropped, deduplicated, or imputed. Warnings
-preserve the data; structural/type errors and broken claim checks prevent export.
+Claim input checks precede removal of rows with ClaimCharge <= 0. The tables
+remain separate; no deduplication or imputation is performed. Structural/type
+errors and broken claim checks prevent export.
 """
 
 from __future__ import annotations
@@ -28,6 +29,10 @@ CLAIM_COLUMNS = (
     "BeginDate", "Year", "EndDate", "DirectComp", "CompRate", "SettlYear",
     "ClaimCharge", "PolicyID", "LicNb",
 )
+POLICY_KEY_COLUMNS = ("PolicyID", "LicNb", "Year", "BeginDate", "EndDate")
+CLAIM_KEY_COLUMNS = (
+    "PolicyID", "LicNb", "Year", "BeginDate", "EndDate", "SettlYear", "ClaimCharge",
+)
 REQUIRED_COLUMNS = {
     "pg16trainpol": (*POLICY_FEATURES, "ClaimNb"),
     "pg16trainclaim": CLAIM_COLUMNS,
@@ -46,6 +51,50 @@ OUTPUT_NAMES = {
     "pg16trainpol": "clean_train_policy",
     "pg16trainclaim": "clean_train_claim",
     "pg16test": "clean_test_policy",
+}
+# Meanings summarize the official PG16 reference. Statistical classifications
+# are processing interpretations, informed by the definitions and observed labels.
+VARIABLE_DEFINITIONS = {
+    "Year": ("Numerical (discrete year)", "Calendar year to which coverage applies."),
+    "BeginDate": ("Temporal (date)", "Date when coverage starts."),
+    "EndDate": ("Temporal (date)", "Date when coverage ends."),
+    "Exposure": ("Numerical (continuous fraction)", "Covered fraction of a year: (EndDate - BeginDate) / 365."),
+    "PolicyID": ("Identifier (nominal)", "Identifier assigned to a policy."),
+    "LicNb": ("Identifier (nominal)", "Vehicle licence identifier."),
+    "PolicyAgeCateg": ("Categorical (ordinal age bands)", "Age bracket of the policy."),
+    "PolicyCateg": ("Categorical (nominal)", "Policy classification."),
+    "CompanyCreation": ("Binary indicator (nominal)", "Indicator of company creation."),
+    "FleetMgt": ("Categorical (nominal)", "Fleet-management grouping."),
+    "FleetSizeCateg": ("Categorical (nominal codes)", "Grouping by fleet size."),
+    "Area": ("Categorical (nominal)", "Geographic zone."),
+    "PayFreq": ("Categorical (ordinal frequency labels)", "How frequently payments occur."),
+    "VehiclAge": ("Categorical (ordinal age bands)", "Grouping by vehicle age."),
+    "VehiclNb": ("Numerical (discrete count)", "Count of vehicles."),
+    "VehiclCateg": ("Categorical (nominal)", "Vehicle classification."),
+    "VehiclPower": ("Categorical (nominal codes)", "Vehicle power."),
+    "Deduc": ("Categorical (ordinal amount bands)", "Grouping by deductible amount."),
+    "SumInsured": ("Categorical (ordinal bands; Unknown unranked)", "Grouping by insured amount."),
+    "BusinessType": ("Categorical (nominal)", "Business classification."),
+    "ChannelDist": ("Categorical (nominal)", "Channel used for distribution."),
+    "ClaimNb": ("Numerical (discrete count)", "Count of claims."),
+    "ClaimCharge": ("Numerical (continuous monetary amount)", "Charge associated with a claim."),
+    "DirectComp": (
+        "Binary indicator (nominal)",
+        "Under IDA, indicates direct reimbursement to the insured, with possible later recovery from the other insurer.",
+    ),
+    "CompRate": ("Numerical (percentage)", "Compensation expressed as a percentage."),
+    "SettlYear": ("Numerical (discrete year)", "Year in which settlement occurs."),
+}
+DERIVED_VARIABLE_DEFINITIONS = {
+    "ExposureFromDates": (
+        "Numerical (continuous fraction)", "Coverage duration in days divided by 365, calculated by this pipeline.",
+    ),
+    "ExposureDifference": (
+        "Numerical (continuous signed difference)", "Supplied Exposure minus ExposureFromDates.",
+    ),
+    "ExposureMismatch": (
+        "Binary indicator (nominal)", "True when the absolute exposure difference exceeds the configured tolerance; missing if uncheckable.",
+    ),
 }
 
 
@@ -66,6 +115,69 @@ class ProcessingResult:
     @property
     def has_errors(self) -> bool:
         return any(check.status == "FAIL" for check in self.checks)
+
+    @property
+    def variable_inventory(self) -> pd.DataFrame:
+        """Describe every column currently present in the returned tables."""
+        return describe_variables(self.tables)
+
+
+def _infer_variable_type(values: pd.Series) -> str:
+    """Conservative fallback for columns absent from the documented schema."""
+    dtype = values.dtype
+    if values.isna().all():
+        return "Undetermined (all missing)"
+    if pd.api.types.is_bool_dtype(dtype):
+        return "Binary (boolean storage)"
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        return "Temporal (date/time)"
+    if pd.api.types.is_timedelta64_dtype(dtype):
+        return "Temporal (duration)"
+    if isinstance(dtype, pd.CategoricalDtype):
+        return "Categorical (ordered storage)" if dtype.ordered else "Categorical (nominal storage)"
+    if pd.api.types.is_integer_dtype(dtype):
+        return "Numerical (integer storage; role unverified)"
+    if pd.api.types.is_numeric_dtype(dtype):
+        return "Numerical (numeric storage; role unverified)"
+    return "Text/object (role unverified)"
+
+
+def describe_variables(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Detect every actual column, including unexpected and derived variables.
+
+    Return one metadata row per table/column without modifying the data. Dtypes,
+    distinct counts, and missing counts are measured; semantic classifications
+    use the documented meanings and observed labels. Undocumented columns get a
+    conservative storage-based classification with no invented official meaning.
+    A two-valued count remains numerical; binary flags and categorical variables
+    with two observed levels are identified separately.
+    """
+    rows = []
+    for table_name, frame in tables.items():
+        for name, values in frame.items():
+            distinct = int(values.nunique(dropna=True))
+            if name in VARIABLE_DEFINITIONS:
+                kind, meaning = VARIABLE_DEFINITIONS[name]
+                origin, basis = "Official", "Definition and observed labels"
+            elif name in DERIVED_VARIABLE_DEFINITIONS:
+                kind, meaning = DERIVED_VARIABLE_DEFINITIONS[name]
+                origin, basis = "Derived", "Pipeline definition"
+            else:
+                kind = _infer_variable_type(values)
+                meaning = "No definition in the cited PG16 reference; meaning requires review."
+                origin, basis = "Undocumented", "Storage inference only"
+            if kind.startswith("Categorical") and distinct == 2:
+                kind += "; binary observed"
+            rows.append({
+                "table": table_name, "variable": name, "dtype": str(values.dtype),
+                "statistical_type": kind, "distinct": distinct,
+                "missing": int(values.isna().sum()), "origin": origin,
+                "classification_basis": basis, "meaning": meaning,
+            })
+    return pd.DataFrame(rows, columns=[
+        "table", "variable", "dtype", "statistical_type", "distinct", "missing",
+        "origin", "classification_basis", "meaning",
+    ])
 
 
 class DataValidationError(ValueError):
@@ -164,11 +276,12 @@ def _validate_policy(name: str, frame: pd.DataFrame, checks: list[Check], tolera
         f"{name}: PolicyID present", "FAIL" if missing_ids.any() else "PASS",
         f"{int(missing_ids.sum()):,} missing or blank identifiers.",
     ))
-    key = ["PolicyID", "LicNb", "Year", "BeginDate", "EndDate"]
-    repeated_keys = int(frame.duplicated(key).sum())
+    incomplete = frame[list(POLICY_KEY_COLUMNS)].isna().any(axis=1)
+    duplicates = int(frame.loc[~incomplete].duplicated(list(POLICY_KEY_COLUMNS)).sum())
     checks.append(Check(
-        f"{name}: policy combination uniqueness", "WARN" if repeated_keys else "PASS",
-        f"{repeated_keys:,} duplicate occurrences of (PolicyID, LicNb, Year, BeginDate, EndDate).",
+        f"{name}: policy combination uniqueness", "WARN" if duplicates or incomplete.any() else "PASS",
+        f"{duplicates:,} duplicate occurrences beyond the first for ({', '.join(POLICY_KEY_COLUMNS)}); "
+        f"{int(incomplete.sum()):,} incomplete keys not checkable.",
     ))
     bad_ranges = (frame["EndDate"] < frame["BeginDate"]).fillna(False)
     bad_values = ((frame["Exposure"] < 0) | (frame["VehiclNb"] < 1)).fillna(False)
@@ -195,6 +308,38 @@ def _validate_policy(name: str, frame: pd.DataFrame, checks: list[Check], tolera
     ))
 
 
+def _process_claims(claims: pd.DataFrame, checks: list[Check]) -> pd.DataFrame:
+    """Check the claim key before/after removing nonpositive charges.
+
+    Missing charges are retained, and incomplete keys are reported as
+    uncheckable. Duplicate keys do not themselves cause row removal.
+    """
+    nonpositive = claims["ClaimCharge"].le(0).fillna(False)
+    filtered = claims.loc[~nonpositive].copy().reset_index(drop=True)
+    details = []
+    has_warning = False
+    for stage, frame in (("Before filtering", claims), ("After filtering", filtered)):
+        incomplete = frame[list(CLAIM_KEY_COLUMNS)].isna().any(axis=1)
+        duplicates = int(frame.loc[~incomplete].duplicated(list(CLAIM_KEY_COLUMNS)).sum())
+        has_warning = has_warning or bool(duplicates or incomplete.any())
+        details.append(
+            f"{stage}: {duplicates:,} duplicate occurrences beyond the first among {len(frame):,} rows; "
+            f"{int(incomplete.sum()):,} incomplete keys not checkable"
+        )
+    checks.append(Check(
+        "Claim combination uniqueness", "WARN" if has_warning else "PASS", "; ".join(details) + ".",
+    ))
+    negative = int(claims["ClaimCharge"].lt(0).sum())
+    zero = int(claims["ClaimCharge"].eq(0).sum())
+    checks.append(Check(
+        "ClaimCharge filter", "PASS",
+        f"{len(claims):,} input rows; removed {negative:,} negative and {zero:,} zero charges "
+        f"({negative + zero:,} rows); retained {len(filtered):,} rows, including "
+        f"{int(filtered['ClaimCharge'].isna().sum()):,} missing charges. Supplied policy ClaimNb values are unchanged.",
+    ))
+    return filtered
+
+
 def clean_data(
     raw_tables: dict[str, pd.DataFrame],
     exposure_tolerance: float = DEFAULT_EXPOSURE_TOLERANCE,
@@ -204,6 +349,8 @@ def clean_data(
     WARN findings are retained for review. A result containing FAIL findings
     must not be used as clean output; process_data enforces that rule on export.
     ExposureMismatch is nullable when dates or exposure are missing.
+    Claim relationships/counts are checked before removing nonpositive charges;
+    supplied policy ClaimNb values and missing claim charges are preserved.
     """
     if not isfinite(exposure_tolerance) or exposure_tolerance < 0:
         raise ValueError("Exposure tolerance must be finite and nonnegative.")
@@ -277,13 +424,13 @@ def clean_data(
 
     orphan = claims["PolicyID"].isna() | ~claims["PolicyID"].isin(train["PolicyID"].dropna())
     checks.append(Check(
-        "Claim-to-policy relationship", "FAIL" if orphan.any() else "PASS",
+        "Claim-to-policy relationship (before filtering)", "FAIL" if orphan.any() else "PASS",
         f"{int(orphan.sum()):,} claim rows have a missing or unknown PolicyID.",
     ))
     counts_valid = train["ClaimNb"].notna().all() and (train["ClaimNb"] >= 0).all()
     total = int(train["ClaimNb"].sum()) if counts_valid else None
     checks.append(Check(
-        "Claim count reconciliation", "PASS" if total == len(claims) else "FAIL",
+        "Claim count reconciliation (before filtering)", "PASS" if total == len(claims) else "FAIL",
         f"Claim rows = {len(claims):,}; sum(training ClaimNb) = {total:,}." if total is not None
         else "ClaimNb contains missing or negative values; a complete total cannot be reconciled.",
     ))
@@ -292,14 +439,10 @@ def clean_data(
         observed_counts = claims.groupby("PolicyID").size().reindex(expected_counts.index, fill_value=0)
         differences = int((expected_counts != observed_counts).sum())
         checks.append(Check(
-            "Claim counts per PolicyID", "FAIL" if differences else "PASS",
+            "Claim counts per PolicyID (before filtering)", "FAIL" if differences else "PASS",
             f"{differences:,} IDs disagree after aggregating counts for validation only.",
         ))
-    negative, zero = int((claims["ClaimCharge"] < 0).sum()), int((claims["ClaimCharge"] == 0).sum())
-    checks.append(Check(
-        "ClaimCharge values", "WARN" if negative or zero else "PASS",
-        f"{negative:,} negative and {zero:,} zero charges; retained without adjustment.",
-    ))
+    tables["pg16trainclaim"] = _process_claims(claims, checks)
 
     # Align feature order while retaining any unexpected columns for review.
     for name, frame in tables.items():
@@ -311,6 +454,71 @@ def clean_data(
 
 def _cell(value: object) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
+def _variable_inventory_lines(inventory: pd.DataFrame) -> list[str]:
+    """Summarize repeated field definitions once, retaining per-table counts."""
+    table_order = inventory["table"].drop_duplicates().tolist()
+    table_labels = {
+        "clean_train_policy": "Train", "clean_train_claim": "Claims", "clean_test_policy": "Test",
+    }
+    count_heading = "/".join(table_labels.get(name, name) for name in table_order)
+    original_count = inventory.loc[inventory["origin"] == "Official", "variable"].nunique()
+    derived_count = inventory.loc[inventory["origin"] == "Derived", "variable"].nunique()
+    lines = [
+        "", "## Variable inventory", "",
+        f"Detected {inventory['variable'].nunique()} distinct variable names across "
+        f"{len(inventory):,} table columns: {original_count} documented source variables and "
+        f"{derived_count} pipeline diagnostics. Any undocumented variables are listed separately.",
+        "",
+        "Train = clean_train_policy; Claims = clean_train_claim; Test = clean_test_policy. "
+        "Distinct counts exclude missing values; '-' means the variable is absent. "
+        "Storage dtypes are detected after processing.",
+        "",
+        f"Official meanings below summarize the [PG16 reference]({DOCUMENTATION_URL}#format). "
+        "Statistical classifications are processing interpretations of definitions and observed labels. "
+        "Ordinal describes interpretable bands or frequencies; categorical storage remains unordered. "
+        "'Binary observed' means two observed category levels, without asserting only two are possible. "
+        "Counts retain their numerical role even when only two values occur.",
+    ]
+    for origin, title, meaning_heading in (
+        ("Official", "Source variables", "Official meaning (summary)"),
+        ("Undocumented", "Undocumented variables", "Meaning"),
+        ("Derived", "Derived diagnostics", "Pipeline meaning"),
+    ):
+        subset = inventory.loc[inventory["origin"] == origin]
+        if subset.empty:
+            continue
+        lines += [
+            "", f"### {title}", "",
+            f"| Variable | Statistical classification | Storage dtype | Distinct {count_heading} | {meaning_heading} |",
+            "|---|---|---|---|---|",
+        ]
+        for name, group in subset.groupby("variable", sort=False):
+            def summary(column: str) -> str:
+                distinct = group[column].drop_duplicates().tolist()
+                if len(distinct) == 1:
+                    return str(distinct[0])
+                return "; ".join(
+                    f"{table_labels.get(row['table'], row['table'])}: {row[column]}"
+                    for _, row in group.iterrows()
+                )
+
+            counts = dict(zip(group["table"], group["distinct"]))
+            count_text = " / ".join(f"{counts[table]:,}" if table in counts else "-" for table in table_order)
+            cells = [name, summary("statistical_type"), summary("dtype"), count_text, summary("meaning")]
+            lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
+    lines += [
+        "",
+        "Interpretation notes: PolicyAgeCateg, VehiclAge, and Deduc contain interpretable age/amount bands; "
+        "PayFreq contains year/semester/quarter labels. SumInsured's monetary bands have a natural order, "
+        "while its Unknown category has no rank. FleetSizeCateg (S1/S2) and VehiclPower (P1-P11) "
+        "retain nominal treatment because their code meanings/order are undisclosed. "
+        "VehiclNb values 1/2 remain vehicle counts. CompRate's observed 0/50/100 values remain percentages. "
+        "SettlYear includes 0, whose meaning the reference does not explain. "
+        "The three derived diagnostics have pipeline definitions, not official dataset definitions.",
+    ]
+    return lines
 
 
 def _write_report(path: Path, result: ProcessingResult, tolerance: float, exported: bool) -> None:
@@ -347,15 +555,40 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         "ExposureFromDates stores the date calculation; ExposureDifference stores supplied minus calculated exposure. "
         "An uncheckable row has a missing flag. All three diagnostic columns appear in both policy outputs.",
         "",
-        "Uniqueness is checked on (PolicyID, LicNb, Year, BeginDate, EndDate) in each policy table. "
-        "Duplicate combinations are flagged and retained. "
-        "No rows are concatenated, joined, dropped, or deduplicated; missing values and nonpositive claim charges are retained. "
-        "FAIL prevents export; WARN preserves the data for review.",
+        f"Policy uniqueness is checked on ({', '.join(POLICY_KEY_COLUMNS)}) separately in the training and test policy tables. "
+        f"Claim uniqueness is checked on ({', '.join(CLAIM_KEY_COLUMNS)}) before and after filtering. "
+        "Incomplete keys are reported as uncheckable. Duplicate combinations are flagged without deduplication.",
+        "",
+        "Claim rows with ClaimCharge <= 0 are removed from clean_train_claim. "
+        "Claim relationship and count reconciliation checks use the input claims before removal. "
+        "Policy ClaimNb retains its supplied counts, so the filtered claim row count is lower by the number removed. "
+        "Missing charges are retained and reported. Policy rows and raw files are preserved; "
+        "tables are not joined or concatenated, and missing values are not imputed. "
+        "FAIL prevents export; WARN records findings for review.",
     ]
     if exported:
+        lines.extend(_variable_inventory_lines(result.variable_inventory))
         lines += ["", "## Outputs", "", "| File in data/processed | Rows | Columns |", "|---|---:|---:|"]
         for name, frame in result.tables.items():
             lines.append(f"| {name}.parquet | {len(frame):,} | {len(frame.columns)} |")
+        claims = result.tables["clean_train_claim"]
+        complete = claims[list(CLAIM_KEY_COLUMNS)].notna().all(axis=1)
+        frequencies = claims.loc[complete].groupby(list(CLAIM_KEY_COLUMNS), sort=False).size()
+        repeated = frequencies[frequencies > 1].reset_index(name="Occurrences")
+        if not repeated.empty:
+            lines += [
+                "", "## Duplicate claim combinations", "",
+                "Up to five repeated combinations in the filtered claim output; Occurrences includes the first row.",
+                "", "| " + " | ".join((*CLAIM_KEY_COLUMNS, "Occurrences")) + " |",
+                "|" + "---|" * (len(CLAIM_KEY_COLUMNS) + 1),
+            ]
+            for _, row in repeated.head(5).iterrows():
+                cells = [
+                    row["PolicyID"], row["LicNb"], row["Year"],
+                    f"{row['BeginDate']:%Y-%m-%d}", f"{row['EndDate']:%Y-%m-%d}",
+                    row["SettlYear"], repr(float(row["ClaimCharge"])), row["Occurrences"],
+                ]
+                lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
         examples = []
         for name in ("clean_train_policy", "clean_test_policy"):
             frame = result.tables[name]
