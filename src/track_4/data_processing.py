@@ -563,6 +563,9 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         f"Claim uniqueness is checked on ({', '.join(CLAIM_KEY_COLUMNS)}) before and after filtering. "
         "Incomplete keys are reported as uncheckable. Duplicate combinations are flagged without deduplication.",
         "",
+        "The duplicate claim combinations table and its interpretation are in "
+        "[Question 2 of claim_table_checks.md](claim_table_checks.md#duplicate-claim-combinations).",
+        "",
         "Project interpretation: negative or zero claim charges reflect claims where the insured driver is not liable "
         "and legal recourse applies.",
         "",
@@ -578,24 +581,6 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         lines += ["", "## Outputs", "", "| File in data/processed | Rows | Columns |", "|---|---:|---:|"]
         for name, frame in result.tables.items():
             lines.append(f"| {name}.parquet | {len(frame):,} | {len(frame.columns)} |")
-        claims = result.tables["clean_train_claim"]
-        complete = claims[list(CLAIM_KEY_COLUMNS)].notna().all(axis=1)
-        frequencies = claims.loc[complete].groupby(list(CLAIM_KEY_COLUMNS), sort=False).size()
-        repeated = frequencies[frequencies > 1].reset_index(name="Occurrences")
-        if not repeated.empty:
-            lines += [
-                "", "## Duplicate claim combinations", "",
-                "Up to five repeated combinations in the filtered claim output; Occurrences includes the first row.",
-                "", "| " + " | ".join((*CLAIM_KEY_COLUMNS, "Occurrences")) + " |",
-                "|" + "---|" * (len(CLAIM_KEY_COLUMNS) + 1),
-            ]
-            for _, row in repeated.head(5).iterrows():
-                cells = [
-                    row["PolicyID"], row["LicNb"], row["Year"],
-                    f"{row['BeginDate']:%Y-%m-%d}", f"{row['EndDate']:%Y-%m-%d}",
-                    row["SettlYear"], repr(float(row["ClaimCharge"])), row["Occurrences"],
-                ]
-                lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
         examples = []
         for name in ("clean_train_policy", "clean_test_policy"):
             frame = result.tables[name]

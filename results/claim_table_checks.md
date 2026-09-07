@@ -47,11 +47,13 @@ dates resolves the ambiguity without choosing an arbitrary policy row.
 
 ## Question 2: One row per accident, or one row per payment?
 
-The available fields do not resolve this distinction. These nine columns contain
-no claim/accident identifier or payment-sequence field. Multiple claims can share
-a coverage period, so repeated coverage keys and differences in SettlYear or
-ClaimCharge do not establish whether rows represent separate accidents or
-separate payments.
+The available fields do not establish either interpretation. Multiple claim rows
+share a coverage period, and the duplicate combinations below show that adding
+SettlYear and ClaimCharge still does not uniquely identify a row. These nine
+columns contain no claim/accident identifier or payment-sequence field that would
+resolve the distinction.
+
+### Claim rows per coverage period
 
 The retained claims cover 3,727 distinct five-field policy periods. Of these,
 217 periods contain multiple claim rows (459 rows in total).
@@ -64,8 +66,34 @@ The retained claims cover 3,727 distinct five-field policy periods. Of these,
 | 4 | 1 |
 | 7 | 1 |
 
-The required seven-field claim uniqueness check and its examples belong in the
-[processing report](data_processing.md#duplicate-claim-combinations).
+### Duplicate claim combinations
+
+The seven-field key is `(PolicyID, LicNb, Year, BeginDate, EndDate, SettlYear,
+ClaimCharge)`. In the filtered claim output, three combinations each occur twice:
+six rows in total, or three duplicate occurrences beyond the first. All keys are
+complete. The validation status before and after filtering remains in
+[data_processing.md](data_processing.md#validation).
+
+All three repeated combinations are shown below. Occurrences includes the first
+row; ClaimCharge values are displayed at full stored precision.
+
+| PolicyID | LicNb | Year | BeginDate | EndDate | SettlYear | ClaimCharge | Occurrences |
+|---|---|---|---|---|---|---|---|
+| 135 | 699 | 2012 | 2012-03-12 | 2012-06-30 | 2012 | 3639.7934673922023 | 2 |
+| 5336 | 28265 | 2013 | 2013-01-02 | 2013-12-31 | 2014 | 1863.3606703405062 | 2 |
+| 14499 | 69326 | 2013 | 2013-04-04 | 2013-08-31 | 2013 | 6996.211768431509 | 2 |
+
+### Interpretation
+
+Each pair also matches on DirectComp and CompRate, so all nine recorded fields
+are identical within the pair. The table establishes repeated recorded rows;
+it cannot distinguish repeated entries of one event from separate events recorded
+identically. Neither these pairs nor multiple rows within a coverage period
+establish one row per accident or one row per payment.
+
+The pipeline flags these combinations and retains all six rows. The charge filter
+does not remove them because their charges are positive; no automatic deduplication
+is applied. They remain included in the row counts used in Question 3.
 
 `SettlYear=0` occurs in 39 retained rows. Its meaning remains unresolved in the
 [variable inventory](data_processing.md#variable-inventory); it is not used here
@@ -117,7 +145,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path('src').resolve()))
 from track_4.data_processing import (
-    POLICY_KEY_COLUMNS, load_raw_data, _convert_table,
+    POLICY_KEY_COLUMNS, CLAIM_KEY_COLUMNS, load_raw_data, _convert_table,
 )
 
 policy = pd.read_parquet('data/processed/clean_train_policy.parquet')
@@ -167,6 +195,23 @@ print('Periods / repeated periods / rows in repeats:',
       len(sizes), len(repeated), int(repeated.sum()))
 print('Rows per period:', sizes.value_counts().sort_index().to_dict())
 print('Retained SettlYear=0 rows:', int(claim['SettlYear'].eq(0).sum()))
+
+# Reproduce the duplicate combinations table in Question 2.
+claim_key = list(CLAIM_KEY_COLUMNS)
+complete = claim[claim_key].notna().all(axis=1)
+frequencies = claim.loc[complete].groupby(claim_key, sort=False).size()
+duplicates = frequencies[frequencies.gt(1)].reset_index(name='Occurrences')
+print('Repeated keys / involved rows / excess occurrences:', len(duplicates),
+      int(duplicates['Occurrences'].sum()), int((duplicates['Occurrences'] - 1).sum()))
+print('Incomplete seven-field keys:', int((~complete).sum()))
+print('Duplicate occurrences across all nine fields:', int(claim.duplicated().sum()))
+print('| ' + ' | '.join(claim_key + ['Occurrences']) + ' |')
+print('|' + '---|' * (len(claim_key) + 1))
+for _, row in duplicates.iterrows():
+    cells = [row['PolicyID'], row['LicNb'], row['Year'],
+             f"{row['BeginDate']:%Y-%m-%d}", f"{row['EndDate']:%Y-%m-%d}",
+             row['SettlYear'], repr(float(row['ClaimCharge'])), row['Occurrences']]
+    print('| ' + ' | '.join(str(cell) for cell in cells) + ' |')
 
 # Include every policy period, including those with zero retained claims.
 expected = policy.set_index(key)['ClaimNb']

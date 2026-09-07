@@ -48,6 +48,8 @@ ExposureMismatch flags abs(Exposure - (EndDate - BeginDate) / 365) > 1e-08 with 
 
 Policy uniqueness is checked on (PolicyID, LicNb, Year, BeginDate, EndDate) separately in the training and test policy tables. Claim uniqueness is checked on (PolicyID, LicNb, Year, BeginDate, EndDate, SettlYear, ClaimCharge) before and after filtering. Incomplete keys are reported as uncheckable. Duplicate combinations are flagged without deduplication.
 
+The duplicate claim combinations table and its interpretation are in [Question 2 of claim_table_checks.md](claim_table_checks.md#duplicate-claim-combinations).
+
 Project interpretation: negative or zero claim charges reflect claims where the insured driver is not liable and legal recourse applies.
 
 Claim rows with ClaimCharge <= 0 are removed from clean_train_claim. Claim relationship and count reconciliation checks use the input claims before removal. Policy ClaimNb retains its supplied counts, so the filtered claim row count is lower by the number removed. Missing charges are retained and reported. Policy rows and raw files are preserved; tables are not joined or concatenated, and missing values are not imputed. FAIL prevents export; WARN records findings for review.
@@ -108,16 +110,6 @@ Interpretation notes: PolicyAgeCateg, VehiclAge, and Deduc contain interpretable
 | clean_train_policy.parquet | 87,228 | 25 |
 | clean_train_claim.parquet | 3,969 | 9 |
 | clean_test_policy.parquet | 32,772 | 24 |
-
-## Duplicate claim combinations
-
-Up to five repeated combinations in the filtered claim output; Occurrences includes the first row.
-
-| PolicyID | LicNb | Year | BeginDate | EndDate | SettlYear | ClaimCharge | Occurrences |
-|---|---|---|---|---|---|---|---|
-| 135 | 699 | 2012 | 2012-03-12 | 2012-06-30 | 2012 | 3639.7934673922023 | 2 |
-| 5336 | 28265 | 2013 | 2013-01-02 | 2013-12-31 | 2014 | 1863.3606703405062 | 2 |
-| 14499 | 69326 | 2013 | 2013-04-04 | 2013-08-31 | 2013 | 6996.211768431509 | 2 |
 
 ## Largest exposure discrepancies
 
