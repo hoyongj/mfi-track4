@@ -6,13 +6,14 @@ Read-only analysis of `data/processed/clean_train_claim.parquet` (3,969 rows,
 
 [data_processing.md](data_processing.md) records the cleaning rules, removal totals
 and liability/recourse explanation, official variable meanings, types, and pipeline
-validation. This report covers linkage to policy coverage periods and interpretation
-of the retained claim rows. Re-run the code below when processed outputs change.
+validation. This report preserves the three original questions below, with answers
+updated for the cleaned claims. Re-run the code below when processed outputs change.
 
-## Coverage-period linkage
+## Question 1: What do BeginDate/EndDate mean in the claim table?
 
-Use `(PolicyID, LicNb, Year, BeginDate, EndDate)` to identify a policy coverage
-period. Counting candidate policy rows for each retained claim gives:
+They are the start and end dates of the associated policy coverage period. Use
+`(PolicyID, LicNb, Year, BeginDate, EndDate)` to identify that period. Counting
+candidate policy rows for each retained claim gives:
 
 | Fields used for matching | Exactly one candidate | Multiple candidates | No candidate |
 |---|---:|---:|---:|
@@ -24,7 +25,13 @@ interpretation in the [variable inventory](data_processing.md#variable-inventory
 Several policy periods can share the same policy, vehicle, and year; including the
 dates resolves the ambiguity without choosing an arbitrary policy row.
 
-## Rows within each coverage period
+## Question 2: One row per accident, or one row per payment?
+
+The available fields do not resolve this distinction. These nine columns contain
+no claim/accident identifier or payment-sequence field. Multiple claims can share
+a coverage period, so repeated coverage keys and differences in SettlYear or
+ClaimCharge do not establish whether rows represent separate accidents or
+separate payments.
 
 The retained claims cover 3,727 distinct five-field policy periods. Of these,
 217 periods contain multiple claim rows (459 rows in total).
@@ -37,10 +44,6 @@ The retained claims cover 3,727 distinct five-field policy periods. Of these,
 | 4 | 1 |
 | 7 | 1 |
 
-Multiple claims can share a coverage period. These nine columns contain no
-claim/accident identifier or payment-sequence field, so repeated coverage keys and
-differences in SettlYear or ClaimCharge do not establish whether rows represent
-separate accidents or separate payments. That distinction remains unresolved.
 The required seven-field claim uniqueness check and its examples belong in the
 [processing report](data_processing.md#duplicate-claim-combinations).
 
@@ -48,12 +51,21 @@ The required seven-field claim uniqueness check and its examples belong in the
 [variable inventory](data_processing.md#variable-inventory); it is not used here
 to classify claims as settled or unsettled.
 
-## Claim-count reconciliation after filtering
+## Question 3: Does ClaimNb reconcile at (PolicyID, LicNb, Year)?
 
-Count claim rows by the full five-field coverage key and compare with ClaimNb
-across **all** training policy rows, assigning a count of zero to periods with no
-retained claims. A read-only check of the original claim input confirms exact
-agreement with supplied ClaimNb at every coverage key before filtering.
+Yes, before filtering, when ClaimNb is summed across all coverage periods for
+each key. After cleaning, retained claim counts are lower because negative and
+zero charges were excluded. The corresponding policy rows and supplied ClaimNb
+values remain unchanged.
+
+The [processing choices](data_processing.md#processing-choices) record the project
+explanation: these nonpositive charges concern claims where the insured driver is
+not liable and legal recourse applies.
+
+A read-only check also confirms exact reconciliation before filtering at the
+full five-field coverage key. At that finer level, compare retained claim counts
+with ClaimNb across **all** training policy rows, assigning a count of zero to
+periods with no retained claims:
 
 | Supplied ClaimNb minus retained claim rows | Number of policy rows |
 |---:|---:|
@@ -158,8 +170,3 @@ print('Short-key groups / count differences / total gap:',
       len(short_expected), int(short_gap.ne(0).sum()), int(short_gap.sum()))
 '@ | uv run --with 'pandas==3.0.5' --with 'rdata==1.1.0' --with 'pyarrow==25.0.1' python -B -
 ```
-
-
-> Superseded. The CASdatasets documentation states that negative amounts are
-> claims where the insured was not at fault, recovered through legal recourse.
-> Both hypotheses below were wrong; kept for the record.
