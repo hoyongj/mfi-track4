@@ -2351,7 +2351,10 @@ window.Quarto = {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#purpose-of-this-document" id="toc-purpose-of-this-document" class="nav-link active" data-scroll-target="#purpose-of-this-document"><span class="header-section-number">1</span> Purpose of this document</a></li>
+  <li><a href="#purpose-of-this-document" id="toc-purpose-of-this-document" class="nav-link active" data-scroll-target="#purpose-of-this-document"><span class="header-section-number">1</span> Purpose of this document</a>
+  <ul class="collapse">
+  <li><a href="#what-changed-in-this-revision-7-september" id="toc-what-changed-in-this-revision-7-september" class="nav-link" data-scroll-target="#what-changed-in-this-revision-7-september"><span class="header-section-number">1.1</span> What changed in this revision, 7 September</a></li>
+  </ul></li>
   <li><a href="#central-question" id="toc-central-question" class="nav-link" data-scroll-target="#central-question"><span class="header-section-number">2</span> Central question</a>
   <ul class="collapse">
   <li><a href="#modules-connected" id="toc-modules-connected" class="nav-link" data-scroll-target="#modules-connected"><span class="header-section-number">2.1</span> Modules connected</a></li>
@@ -2361,6 +2364,9 @@ window.Quarto = {
   <li><a href="#selection-pg16trainpol-and-pg16trainclaim" id="toc-selection-pg16trainpol-and-pg16trainclaim" class="nav-link" data-scroll-target="#selection-pg16trainpol-and-pg16trainclaim"><span class="header-section-number">3.1</span> Selection: <code>pg16trainpol</code> and <code>pg16trainclaim</code></a></li>
   <li><a href="#why-not-fremtpl2" id="toc-why-not-fremtpl2" class="nav-link" data-scroll-target="#why-not-fremtpl2"><span class="header-section-number">3.2</span> Why not freMTPL2</a></li>
   <li><a href="#loading" id="toc-loading" class="nav-link" data-scroll-target="#loading"><span class="header-section-number">3.3</span> Loading</a></li>
+  <li><a href="#what-a-row-actually-is" id="toc-what-a-row-actually-is" class="nav-link" data-scroll-target="#what-a-row-actually-is"><span class="header-section-number">3.4</span> What a row actually is</a></li>
+  <li><a href="#the-exposure-mismatch-resolved" id="toc-the-exposure-mismatch-resolved" class="nav-link" data-scroll-target="#the-exposure-mismatch-resolved"><span class="header-section-number">3.5</span> The exposure mismatch, resolved</a></li>
+  <li><a href="#cleaning-the-claim-amounts" id="toc-cleaning-the-claim-amounts" class="nav-link" data-scroll-target="#cleaning-the-claim-amounts"><span class="header-section-number">3.6</span> Cleaning the claim amounts</a></li>
   </ul></li>
   <li><a href="#the-ground-up-gap" id="toc-the-ground-up-gap" class="nav-link" data-scroll-target="#the-ground-up-gap"><span class="header-section-number">4</span> The ground-up gap</a></li>
   <li><a href="#model-specification" id="toc-model-specification" class="nav-link" data-scroll-target="#model-specification"><span class="header-section-number">5</span> Model specification</a>
@@ -2368,24 +2374,29 @@ window.Quarto = {
   <li><a href="#frequency" id="toc-frequency" class="nav-link" data-scroll-target="#frequency"><span class="header-section-number">5.1</span> Frequency</a></li>
   <li><a href="#severity" id="toc-severity" class="nav-link" data-scroll-target="#severity"><span class="header-section-number">5.2</span> Severity</a></li>
   <li><a href="#what-we-are-not-doing" id="toc-what-we-are-not-doing" class="nav-link" data-scroll-target="#what-we-are-not-doing"><span class="header-section-number">5.3</span> What we are not doing</a></li>
+  <li><a href="#implementation-note-the-pipeline-is-python" id="toc-implementation-note-the-pipeline-is-python" class="nav-link" data-scroll-target="#implementation-note-the-pipeline-is-python"><span class="header-section-number">5.4</span> Implementation note: the pipeline is Python</a></li>
   </ul></li>
   <li><a href="#scenario-multipliers" id="toc-scenario-multipliers" class="nav-link" data-scroll-target="#scenario-multipliers"><span class="header-section-number">6</span> Scenario multipliers</a>
   <ul class="collapse">
   <li><a href="#baseline-scenario" id="toc-baseline-scenario" class="nav-link" data-scroll-target="#baseline-scenario"><span class="header-section-number">6.1</span> Baseline scenario</a></li>
   <li><a href="#sensitivity-grid" id="toc-sensitivity-grid" class="nav-link" data-scroll-target="#sensitivity-grid"><span class="header-section-number">6.2</span> Sensitivity grid</a></li>
-  <li><a href="#known-weakness-in-this-mapping" id="toc-known-weakness-in-this-mapping" class="nav-link" data-scroll-target="#known-weakness-in-this-mapping"><span class="header-section-number">6.3</span> Known weakness in this mapping</a></li>
+  <li><a href="#what-the-severity-uplift-actually-measures" id="toc-what-the-severity-uplift-actually-measures" class="nav-link" data-scroll-target="#what-the-severity-uplift-actually-measures"><span class="header-section-number">6.3</span> What the severity uplift actually measures</a></li>
   </ul></li>
   <li><a href="#contract-designs" id="toc-contract-designs" class="nav-link" data-scroll-target="#contract-designs"><span class="header-section-number">7</span> Contract designs</a>
   <ul class="collapse">
-  <li><a href="#the-calibration-that-makes-the-comparison-fair" id="toc-the-calibration-that-makes-the-comparison-fair" class="nav-link" data-scroll-target="#the-calibration-that-makes-the-comparison-fair"><span class="header-section-number">7.1</span> The calibration that makes the comparison fair</a></li>
+  <li><a href="#portfolio-size" id="toc-portfolio-size" class="nav-link" data-scroll-target="#portfolio-size"><span class="header-section-number">7.1</span> Portfolio size</a></li>
+  <li><a href="#the-per-claim-limit" id="toc-the-per-claim-limit" class="nav-link" data-scroll-target="#the-per-claim-limit"><span class="header-section-number">7.2</span> The per-claim limit</a></li>
+  <li><a href="#what-we-expect-to-find-and-why-we-say-so-in-advance" id="toc-what-we-expect-to-find-and-why-we-say-so-in-advance" class="nav-link" data-scroll-target="#what-we-expect-to-find-and-why-we-say-so-in-advance"><span class="header-section-number">7.3</span> What we expect to find, and why we say so in advance</a></li>
+  <li><a href="#the-calibration-that-makes-the-comparison-fair" id="toc-the-calibration-that-makes-the-comparison-fair" class="nav-link" data-scroll-target="#the-calibration-that-makes-the-comparison-fair"><span class="header-section-number">7.4</span> The calibration that makes the comparison fair</a></li>
   </ul></li>
   <li><a href="#required-outputs" id="toc-required-outputs" class="nav-link" data-scroll-target="#required-outputs"><span class="header-section-number">8</span> Required outputs</a></li>
   <li><a href="#who-owns-what" id="toc-who-owns-what" class="nav-link" data-scroll-target="#who-owns-what"><span class="header-section-number">9</span> Who owns what</a>
   <ul class="collapse">
   <li><a href="#a-note-for-presentation-sections-4-and-5" id="toc-a-note-for-presentation-sections-4-and-5" class="nav-link" data-scroll-target="#a-note-for-presentation-sections-4-and-5"><span class="header-section-number">9.1</span> A note for presentation sections 4 and 5</a></li>
-  <li><a href="#review" id="toc-review" class="nav-link" data-scroll-target="#review"><span class="header-section-number">9.2</span> Review</a></li>
-  <li><a href="#where-things-live" id="toc-where-things-live" class="nav-link" data-scroll-target="#where-things-live"><span class="header-section-number">9.3</span> Where things live</a></li>
-  <li><a href="#one-open-role" id="toc-one-open-role" class="nav-link" data-scroll-target="#one-open-role"><span class="header-section-number">9.4</span> One open role</a></li>
+  <li><a href="#splitting-assumptions-from-limitations" id="toc-splitting-assumptions-from-limitations" class="nav-link" data-scroll-target="#splitting-assumptions-from-limitations"><span class="header-section-number">9.2</span> Splitting assumptions from limitations</a></li>
+  <li><a href="#review" id="toc-review" class="nav-link" data-scroll-target="#review"><span class="header-section-number">9.3</span> Review</a></li>
+  <li><a href="#where-things-live" id="toc-where-things-live" class="nav-link" data-scroll-target="#where-things-live"><span class="header-section-number">9.4</span> Where things live</a></li>
+  <li><a href="#one-shared-deck" id="toc-one-shared-deck" class="nav-link" data-scroll-target="#one-shared-deck"><span class="header-section-number">9.5</span> One shared deck</a></li>
   </ul></li>
   <li><a href="#limitations-register" id="toc-limitations-register" class="nav-link" data-scroll-target="#limitations-register"><span class="header-section-number">10</span> Limitations register</a></li>
   <li><a href="#questions-we-will-be-asked" id="toc-questions-we-will-be-asked" class="nav-link" data-scroll-target="#questions-we-will-be-asked"><span class="header-section-number">11</span> Questions we will be asked</a></li>
@@ -2433,7 +2444,35 @@ window.Quarto = {
 <p>Anything marked <strong>fixed</strong> should be treated as settled unless someone raises a substantive objection. Anything marked <strong>open</strong> is genuinely undecided and needs an owner.</p>
 <p><strong>Presentation: Monday 14 September 2026, 18:00 to 21:00, UY 9016.</strong> This is the first STA 2550 session on the registrar timetable. An earlier email mentioned 9 September, but that falls on a Wednesday and STA 2550 meets on Mondays, so 14 September is the date to plan around.</p>
 <p>A note on numbering. This document numbers its own sections, and the presentation has five sections of its own. They are different things. Whenever this document refers to one of the five presentation sections it says so explicitly, for example “presentation section 4”.</p>
+<section id="what-changed-in-this-revision-7-september" class="level3" data-number="1.1">
+<h3 data-number="1.1" class="anchored" data-anchor-id="what-changed-in-this-revision-7-september"><span class="header-section-number">1.1</span> What changed in this revision, 7 September</h3>
+<p>Nobody needs to reread the whole document. These are the substantive changes.</p>
+<p><strong>From the validation run (<code>results/data_processing.md</code>) and the claim-table checks (<code>results/claim_table_checks.md</code>):</strong></p>
+<ul>
+<li><strong>13.1% of claims are non-positive.</strong> 597 negative and 2 zero out of 4,568. Cleaned claim count is 3,969 and <span class="math inline">\(\lambda\)</span> falls about 13%. Limitation 8 rewritten.</li>
+<li><strong>We do not know why they are negative.</strong> Two explanations tested and both failed: direct-compensation recoveries, and reserve movements on unsettled claims. Saying so is stronger than guessing.</li>
+<li><strong>The claim table is one row per accident, but the earlier reason was wrong.</strong> The date-uniqueness check had been run on the <em>policy</em> table. The claim table’s date combination is <strong>not</strong> unique. The real evidence is <code>ClaimNb</code>: 6 disagreements out of 4,244 groups.</li>
+<li><strong>There is no accident date in the data.</strong> The claim table’s dates are the policy period copied across, matching at 100%.</li>
+<li><strong>The supplied <code>ClaimNb</code> column must not be used</strong> after cleaning. It reconciles to the uncleaned 4,568. Rebuild counts from the cleaned claim table.</li>
+<li><strong>The exposure mismatch has a likely explanation.</strong> Supplied <code>Exposure</code> looks like vehicle-years, <code>VehiclNb</code> times period length, rounded to 2dp. The validation check omits <code>VehiclNb</code>, which is why it fires on 82,435 rows. Not yet verified; one line in the spec settles it.</li>
+<li><strong><code>SumInsured</code> is a banded category, not a number</strong>, so <span class="math inline">\(L\)</span> takes a band edge rather than a value read off the field.</li>
+<li><strong>The train-only categorical levels are confirmed harmless</strong>: train is the superset, and we use no covariates.</li>
+</ul>
+<p><strong>Decisions and corrections:</strong></p>
+<ul>
+<li><strong>Install path corrected</strong>; <code>xts</code>/<code>zoo</code> were missing from the prerequisites.</li>
+<li><strong>The data is four years, not one.</strong> Limitation 6 rewritten.</li>
+<li><strong>A policy row is a covered vehicle over a period, not a policy.</strong> Do not merge or split. The claim table is already one row per accident; do not aggregate it.</li>
+<li><strong>Severity multiplier changed from 1.10 to 1.15.</strong> The PDL severity figure exists in the same HLDI source, so both multipliers now come from the coverage that matches our data.</li>
+<li><strong>Portfolio size fixed at 1,000 vehicles.</strong></li>
+<li><strong>Per-claim limit <span class="math inline">\(L\)</span> now has a source and a robustness test</strong>, after Xiaoxiao’s review.</li>
+<li><strong>Simulation code corrected, and a Python translation note added.</strong> Both negative binomial parameters scale with portfolio size. In <code>scipy.stats.nbinom</code> terms, only <span class="math inline">\(n\)</span> scales and <span class="math inline">\(p\)</span> does not.</li>
+<li><strong>Three slides each, not four.</strong> Four each did not fit the 20-slide cap.</li>
+<li><strong>Assumptions split from limitations</strong> between presentation sections 2 and 5.</li>
+</ul>
+<p><strong>Numbers freeze target: Wednesday 9 September</strong>, subject to Qiwei’s timing. Full run-through with timing and practice questions Saturday 12 September.</p>
 <hr>
+</section>
 </section>
 <section id="central-question" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="central-question"><span class="header-section-number">2</span> Central question</h2>
@@ -2543,22 +2582,108 @@ window.Quarto = {
 </section>
 <section id="loading" class="level3" data-number="3.3">
 <h3 data-number="3.3" class="anchored" data-anchor-id="loading"><span class="header-section-number">3.3</span> Loading</h3>
+<p>The package is not on CRAN and the path in an earlier version of this document was stale. <code>xts</code> and <code>zoo</code> must be installed first or the load fails with an unhelpful error.</p>
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;CASdatasets&quot;</span>, <span class="at">repos =</span> <span class="st">&quot;http://cas.uqam.ca/pub/R/&quot;</span>, <span class="at">type =</span> <span class="st">&quot;source&quot;</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(<span class="st">&quot;xts&quot;</span>, <span class="st">&quot;zoo&quot;</span>))</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(CASdatasets)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(pricingame)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>pol   <span class="ot">&lt;-</span> pg16trainpol    <span class="co"># 87,228 policies, exposure and risk characteristics</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>claim <span class="ot">&lt;-</span> pg16trainclaim  <span class="co"># 4,568 claims, individual amounts</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(pol)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(claim)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Three mirrors, try in order. Large download, allow a few minutes.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;CASdatasets&quot;</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">repos =</span> <span class="st">&quot;https://dutangc.perso.math.cnrs.fr/RRepository/pub/&quot;</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">type =</span> <span class="st">&quot;source&quot;</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># or repos = &quot;http://dutangc.free.fr/pub/RRepos/pub/&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># or repos = &quot;https://cas.uqam.ca/pub/&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># last resort: devtools::install_github(&quot;dutangc/CASdatasets&quot;)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(CASdatasets)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(pricingame)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>pol   <span class="ot">&lt;-</span> pg16trainpol    <span class="co"># 87,228 policy-period rows</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>claim <span class="ot">&lt;-</span> pg16trainclaim  <span class="co"># 4,568 claims, individual amounts</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(pol)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(claim)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Two practical notes for whoever handles the data. Most categorical levels are anonymised for confidentiality, so they carry no interpretable meaning and should not be used to tell a story about driver or vehicle type. And the join between the two tables is on the policy identifier, so policies with no claim will not appear in the claim table at all.</p>
+</section>
+<section id="what-a-row-actually-is" class="level3" data-number="3.4">
+<h3 data-number="3.4" class="anchored" data-anchor-id="what-a-row-actually-is"><span class="header-section-number">3.4</span> What a row actually is</h3>
+<p>Status: <strong>fixed</strong>, settled against the data 6-7 September and confirmed by the validation run in <code>results/data_processing.md</code>.</p>
+<p><strong>The policy table is not one row per policy.</strong> A row is one covered vehicle over one coverage period. A single <code>PolicyID</code> can appear several times: once per vehicle (<code>LicNb</code>) and once per period when cover is renewed or amended. Example from the data, <code>PolicyID</code> 3933 occupies four rows covering two vehicles across three years. The validation confirms <code>(PolicyID, LicNb, Year, BeginDate, EndDate)</code> is unique with zero duplicates, so that tuple is the row key.</p>
+<p>Leave those rows as they are. Do not merge them into one row per policy and do not split them further. The frequency model uses exposure as an offset, so the unit that matters is vehicle time on risk, not the count of policy numbers. Each row is one observation carrying its own exposure, and claims attach to the row they fall in. This is the standard vehicle-year construction.</p>
+<p><strong>The training data covers four years, not one.</strong> A fifth year is held out as <code>pg16test</code> (32,772 rows), which we do not use. An earlier version of this document assumed a single year; that was wrong and the limitations register has been corrected. We pool all four years. The exposure offset already puts everything on an annual basis, so pooling still yields an annual <span class="math inline">\(\lambda\)</span> and gives us four times the data.</p>
+<p><strong>The claim table is one row per accident.</strong> Verified on 7 September and recorded in <code>results/claim_table_checks.md</code>.</p>
+<p>An earlier version of this document justified this by claiming <code>(PolicyID, LicNb, date)</code> is unique in the claim table. <strong>That was wrong.</strong> The uniqueness check it leaned on had been run on the <em>policy</em> table, and <code>(PolicyID, LicNb, Year, BeginDate, EndDate)</code> is in fact <strong>not</strong> unique in the claim table: 604 rows fall into 286 repeated groups.</p>
+<p>The correct justification is the insurer’s own count. Grouping claim rows by <code>(PolicyID, LicNb, Year)</code> and comparing against <code>ClaimNb</code> on the matching policy sub-period, <strong>6 groups out of 4,244 disagree and all by exactly one</strong>. Totals reconcile at 4,568 = 4,568. If the repeated rows were split payments on a single accident, <code>ClaimNb</code> would sit <em>below</em> the row count by roughly the 318 surplus rows. It does not. The insurer is counting each claim row as a separate accident, so we do too, and we do not aggregate.</p>
+<p><code>results/claim_table_checks.md</code> contains a line reading the duplicates as payment rows. Disregard it; it contradicts the reconciliation in the same document.</p>
+<p><strong>There is no accident date in the data.</strong> <code>BeginDate</code> and <code>EndDate</code> in the claim table are the policy coverage period copied across from the policy row, matching at 100.00% on all 4,568 rows. Two accidents falling in the same coverage period are therefore indistinguishable from each other, which is why the date could never have settled this question. It does not matter for us: an intercept-only frequency model needs the count per exposure period, not the day each accident happened. Say this if asked what is missing from the data.</p>
+</section>
+<section id="the-exposure-mismatch-resolved" class="level3" data-number="3.5">
+<h3 data-number="3.5" class="anchored" data-anchor-id="the-exposure-mismatch-resolved"><span class="header-section-number">3.5</span> The exposure mismatch, resolved</h3>
+<p>Status: <strong>fixed</strong>. This was Qiwei’s original point 2 and it now has an explanation rather than a shrug.</p>
+<p>The validation flags 82,435 of 87,228 rows where the supplied <code>Exposure</code> differs from <code>(EndDate - BeginDate) / 365</code>, with 18,052 rows off by more than a rounding tolerance and a maximum gap of 0.166.</p>
+<p>Look at the largest discrepancies and the pattern is immediate:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>PolicyID</th>
+<th>Period</th>
+<th style="text-align: right;">Days</th>
+<th style="text-align: right;">From dates</th>
+<th style="text-align: right;">Supplied</th>
+<th style="text-align: right;">Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2954</td>
+<td>2012-02-03 to 2012-04-03</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">0.164</td>
+<td style="text-align: right;">0.33</td>
+<td style="text-align: right;">2.01</td>
+</tr>
+<tr class="even">
+<td>5515</td>
+<td>2012-05-16 to 2012-06-17</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">0.088</td>
+<td style="text-align: right;">0.18</td>
+<td style="text-align: right;">2.05</td>
+</tr>
+<tr class="odd">
+<td>17983 (test)</td>
+<td>2014-01-01 to 2014-11-30</td>
+<td style="text-align: right;">333</td>
+<td style="text-align: right;">0.912</td>
+<td style="text-align: right;">0.92</td>
+<td style="text-align: right;">1.01</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Supplied exposure is vehicle-years, not policy-years.</strong> It appears to be <code>VehiclNb</code> times the period length, rounded to two decimals. The check in the pipeline computes only the period length, which is why it fires on every multi-vehicle row. The rounding to 2dp explains the remaining small differences: half a hundredth is 0.005, which is exactly the benchmark that 18,052 rows exceed, and those are the multi-vehicle ones.</p>
+<p>This is a hypothesis with strong support, not a verified fact. One line settles it:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>(pol[<span class="st">&quot;Exposure&quot;</span>] <span class="op">/</span> (pol[<span class="st">&quot;VehiclNb&quot;</span>] <span class="op">*</span> pol[<span class="st">&quot;ExposureFromDates&quot;</span>])).describe()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>If that clusters at 1.0, the matter is closed. Either way <strong>we keep the supplied <code>Exposure</code> column</strong>, and if the hypothesis holds we can say why rather than saying we trusted the insurer’s number. It also confirms the modelling choice above: the denominator we want is vehicle time on risk, and that is what the supplied column already measures.</p>
+</section>
+<section id="cleaning-the-claim-amounts" class="level3" data-number="3.6">
+<h3 data-number="3.6" class="anchored" data-anchor-id="cleaning-the-claim-amounts"><span class="header-section-number">3.6</span> Cleaning the claim amounts</h3>
+<p>Status: <strong>fixed in rule, one diagnostic outstanding</strong>.</p>
+<p>The validation found <strong>597 negative and 2 zero <code>ClaimCharge</code> values out of 4,568</strong>. That is <strong>13.1% of the claim table</strong>, which is far more than the handful this document previously assumed. It is large enough to be a headline limitation rather than a footnote. See limitation 8.</p>
+<p>Lognormal and gamma need strictly positive support, so the 599 rows come out of the severity fit. Two consequences follow and neither is optional:</p>
+<ol type="1">
+<li><strong>They come out of the claim counts as well.</strong> After cleaning the count is 3,969, not 4,568, so <span class="math inline">\(\lambda\)</span> falls by about 13%. The <code>ClaimNb</code> column in the policy table currently reconciles to the uncleaned 4,568 and must be rebuilt by aggregating the cleaned claim table back onto policy rows. Using the supplied <code>ClaimNb</code> alongside a cleaned severity fit would mean the simulation draws 4,568 claims and assigns every one a positive cost, which inflates the aggregate.</li>
+<li><strong>The drop is not random.</strong> We are removing accidents on which the insurer ended up net positive, so the surviving severity distribution is conditional on the insurer having net paid. That pushes mean severity up while frequency goes down.</li>
+</ol>
+<p><strong>We do not know what the negatives are, and we tested two explanations that failed.</strong></p>
+<ul>
+<li><em>Direct compensation recoveries.</em> Ruled out. 570 of the 597 negatives sit at <code>DirectComp = False</code> with <code>CompRate = 0</code>, which is the ordinary-claim category. <code>CompRate = 100</code> contains 79 rows and <strong>zero</strong> negatives. The <code>DirectComp = True</code> group does show a higher negative rate, 21% against 13%, but on 126 rows that is not something to build an argument on.</li>
+<li><em>Reserve movements on unsettled claims.</em> Ruled out, and refuted rather than merely unsupported. Only 41 rows carry <code>SettlYear = 0</code>, and <strong>none of them are negative</strong>. Every one of the 597 negatives sits among the settled rows.</li>
+</ul>
+<p>So the rule stands but the mechanism is unexplained. Say exactly that. <strong>“We ruled out recoveries and reserve movements, and the public file does not carry the transaction detail needed to identify the cause”</strong> is a much stronger answer than calling them anomalies, and it converts directly into an answer to <em>what would you want before using this in practice</em>: claim transaction history, with payments separated from reserve movements.</p>
+<p>Record and report: rows in, rows out, how many zero, how many negative.</p>
 <hr>
 </section>
 </section>
@@ -2589,7 +2714,8 @@ window.Quarto = {
 <p><strong>Negative binomial</strong>, with Poisson fitted alongside as a diagnostic.</p>
 <p>The rationale is overdispersion. A Poisson model forces the variance to equal the mean, and motor claim counts almost always show a variance above the mean because policyholders are not identical. The negative binomial arises naturally as a Poisson mixture over unobserved heterogeneity, which is the right story here given that the risk characteristics in this dataset are anonymised and cannot fully explain that heterogeneity.</p>
 <p>Fit both, report the dispersion statistic, and keep Poisson in the appendix. If the data turn out not to be overdispersed, we use Poisson and say so.</p>
-<p>Exposure enters as an offset, since policies are observed for varying fractions of a year.</p>
+<p>Exposure enters as an offset, since rows are observed for varying fractions of a year. With four years pooled, the offset is what converts everything back to an annual basis, so the fitted <span class="math inline">\(\lambda\)</span> is an annual claim rate per vehicle-year regardless of how many calendar years went in.</p>
+<p>One consequence of pooling worth stating if asked: the same policy contributes several rows, so the rows are not strictly independent. The negative binomial absorbs some of this, since repeat observations of one policy are exactly the unobserved heterogeneity the mixture is there to represent, but it is not a full panel treatment. See limitation 6.</p>
 </section>
 <section id="severity" class="level3" data-number="5.2">
 <h3 data-number="5.2" class="anchored" data-anchor-id="severity"><span class="header-section-number">5.2</span> Severity</h3>
@@ -2600,23 +2726,52 @@ window.Quarto = {
 <section id="what-we-are-not-doing" class="level3" data-number="5.3">
 <h3 data-number="5.3" class="anchored" data-anchor-id="what-we-are-not-doing"><span class="header-section-number">5.3</span> What we are not doing</h3>
 <p>No GLM with covariates. No machine learning. No traffic simulation. No correlated or common-shock structure between claims. Each of these was considered and dropped for scope; if asked, the answer is that the brief limits us to one main dataset and two principal methods, and that the question does not require them.</p>
+</section>
+<section id="implementation-note-the-pipeline-is-python" class="level3" data-number="5.4">
+<h3 data-number="5.4" class="anchored" data-anchor-id="implementation-note-the-pipeline-is-python"><span class="header-section-number">5.4</span> Implementation note: the pipeline is Python</h3>
+<p>Status: <strong>fixed</strong>. The code blocks in this document are written in R because that is how the modelling decisions are usually expressed, but the actual pipeline is Python (<code>src/track_4/</code>, run with <code>uv run src/run_pipeline.py</code>, outputs to Parquet). The decisions are language-independent. One translation is not, and it is the one that can go wrong silently.</p>
+<p><strong><code>rnbinom(mu, size)</code> has no direct Python equivalent.</strong> Both <code>numpy.random.negative_binomial</code> and <code>scipy.stats.nbinom</code> use <span class="math inline">\((n, p)\)</span>. Convert with</p>
+<p><span class="math display">\[n = \theta, \qquad p = \frac{\theta}{\theta + \mu}\]</span></p>
+<p>where <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\theta\)</span> are the fitted per-vehicle mean and dispersion. When scaling to a fleet of 1,000 vehicles, <strong>only <span class="math inline">\(n\)</span> scales</strong>. The probability <span class="math inline">\(p\)</span> is a ratio and both parameters scale together, so it is unchanged:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> nbinom</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> theta <span class="op">/</span> (theta <span class="op">+</span> mu)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> nbinom.rvs(n <span class="op">=</span> n_veh <span class="op">*</span> theta, p <span class="op">=</span> p, size <span class="op">=</span> n_sims, random_state <span class="op">=</span> seed)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Scaling <span class="math inline">\(\mu\)</span> while leaving <span class="math inline">\(n\)</span> at the per-vehicle value gives variance <span class="math inline">\(n\mu + (n\mu)^2/\theta\)</span>, which is wrong by orders of magnitude and inflates every tail measure without producing any visible error. This is the same bug described in the contract designs section, in a different language.</p>
+<p>For the fits themselves, <code>statsmodels.discrete.discrete_model.NegativeBinomial</code> with an <code>exposure</code> argument replaces <code>glm.nb</code>, and <code>scipy.stats.lognorm.fit</code> / <code>scipy.stats.gamma.fit</code> replace <code>fitdist</code>. Compare by AIC as planned.</p>
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Frequency</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit_pois <span class="ot">&lt;-</span> <span class="fu">glm</span>(ClaimNb <span class="sc">~</span> <span class="dv">1</span>, <span class="at">offset =</span> <span class="fu">log</span>(Exposure), <span class="at">family =</span> poisson,  <span class="at">data =</span> pol)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit_nb   <span class="ot">&lt;-</span> <span class="fu">glm.nb</span>(ClaimNb <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(Exposure)),                 <span class="at">data =</span> pol)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Severity</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit_ln <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim<span class="sc">$</span>ClaimAmount, <span class="st">&quot;lnorm&quot;</span>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>fit_ga <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim<span class="sc">$</span>ClaimAmount, <span class="st">&quot;gamma&quot;</span>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">gofstat</span>(<span class="fu">list</span>(fit_ln, fit_ga))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reference implementation. See the note above; the pipeline is Python.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fitdistrplus)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># One cleaned claim table drives BOTH the counts and the severity fit.</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>claim_clean <span class="ot">&lt;-</span> <span class="fu">subset</span>(claim, ClaimCharge <span class="sc">&gt;</span> <span class="dv">0</span>)   <span class="co"># drops 599 of 4,568 rows</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>n_zero <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">==</span> <span class="dv">0</span>)   <span class="co"># 2</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>n_neg  <span class="ot">&lt;-</span> <span class="fu">sum</span>(claim<span class="sc">$</span>ClaimCharge <span class="sc">&lt;</span>  <span class="dv">0</span>)   <span class="co"># 597, see limitation 8</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Counts rebuilt from the cleaned claims. Do NOT use the supplied ClaimNb column,</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># which reconciles to the uncleaned 4,568.</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">aggregate</span>(<span class="fu">list</span>(<span class="at">ClaimNbClean =</span> claim_clean<span class="sc">$</span>ClaimCharge),</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                    <span class="at">by  =</span> <span class="fu">list</span>(<span class="at">PolicyID =</span> claim_clean<span class="sc">$</span>PolicyID,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                               <span class="at">LicNb    =</span> claim_clean<span class="sc">$</span>LicNb),</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                    <span class="at">FUN =</span> length)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>pol <span class="ot">&lt;-</span> <span class="fu">merge</span>(pol, counts, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;PolicyID&quot;</span>, <span class="st">&quot;LicNb&quot;</span>), <span class="at">all.x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>pol<span class="sc">$</span>ClaimNbClean[<span class="fu">is.na</span>(pol<span class="sc">$</span>ClaimNbClean)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Frequency. Exposure is vehicle-years and is used as supplied.</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>fit_pois <span class="ot">&lt;-</span> <span class="fu">glm</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span>, <span class="at">offset =</span> <span class="fu">log</span>(Exposure), <span class="at">family =</span> poisson, <span class="at">data =</span> pol)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>fit_nb   <span class="ot">&lt;-</span> <span class="fu">glm.nb</span>(ClaimNbClean <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">offset</span>(<span class="fu">log</span>(Exposure)),                 <span class="at">data =</span> pol)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Severity</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>fit_ln <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;lnorm&quot;</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>fit_ga <span class="ot">&lt;-</span> <span class="fu">fitdist</span>(claim_clean<span class="sc">$</span>ClaimCharge, <span class="st">&quot;gamma&quot;</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="fu">gofstat</span>(<span class="fu">list</span>(fit_ln, fit_ga))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
+<p>The claim table has no <code>LicNb</code>-level period, so the join above attaches a claim to a vehicle rather than to a specific coverage period. If a vehicle has several periods in the pool, decide whether to join on date range as well; with an intercept-only model this affects nothing, since the totals are the same either way, but say which you did.</p>
 <hr>
 </section>
 </section>
@@ -2642,10 +2797,14 @@ window.Quarto = {
 <td>about <strong>10% lower</strong></td>
 </tr>
 <tr class="odd">
-<td>Property damage liability claim frequency</td>
-<td>about <strong>40% lower</strong></td>
+<td><strong>Property damage liability claim severity</strong></td>
+<td>about <strong>15% higher</strong></td>
 </tr>
 <tr class="even">
+<td><strong>Property damage liability claim frequency</strong></td>
+<td>about <strong>40% lower</strong></td>
+</tr>
+<tr class="odd">
 <td>Overall collision losses</td>
 <td>about <strong>5% lower</strong></td>
 </tr>
@@ -2654,21 +2813,25 @@ window.Quarto = {
 <p>The mechanism is that sensors are expensive to replace and usually require calibration afterwards, but equipped vehicles are in fewer crashes to begin with.</p>
 <section id="baseline-scenario" class="level3" data-number="6.1">
 <h3 data-number="6.1" class="anchored" data-anchor-id="baseline-scenario"><span class="header-section-number">6.1</span> Baseline scenario</h3>
-<p>Our data are third-party material damage, so the property damage liability figures are the closer match.</p>
+<p>Our data are third-party material damage, so the property damage liability figures are the closer match. <strong>Both multipliers are taken from PDL coverage</strong>, so they come from the same coverage in the same study rather than being mixed across coverages.</p>
 <ul>
 <li>Frequency multiplier <span class="math inline">\(\phi_N = 0.60\)</span></li>
-<li>Severity multiplier <span class="math inline">\(\phi_X = 1.10\)</span></li>
+<li>Severity multiplier <span class="math inline">\(\phi_X = 1.15\)</span></li>
 </ul>
 <p>Applied as: <span class="math inline">\(\lambda_{AV} = \phi_N \lambda\)</span>, and severity scaled by <span class="math inline">\(\phi_X\)</span> on the mean while holding the coefficient of variation constant.</p>
+<p>An earlier version of this document used <span class="math inline">\(\phi_X = 1.10\)</span>, the collision figure, and then apologised for mixing coverages. The PDL severity figure exists in the same source; using it removes the mismatch.</p>
 </section>
 <section id="sensitivity-grid" class="level3" data-number="6.2">
 <h3 data-number="6.2" class="anchored" data-anchor-id="sensitivity-grid"><span class="header-section-number">6.2</span> Sensitivity grid</h3>
 <p>Run the full model over <span class="math inline">\(\phi_N \in [0.5, 1.0]\)</span> and <span class="math inline">\(\phi_X \in [1.0, 1.3]\)</span> and present a contour of the result. This is the single most valuable slide in the deck, because it converts our biggest weakness, dependence on assumed parameters, into the subject of the analysis.</p>
 </section>
-<section id="known-weakness-in-this-mapping" class="level3" data-number="6.3">
-<h3 data-number="6.3" class="anchored" data-anchor-id="known-weakness-in-this-mapping"><span class="header-section-number">6.3</span> Known weakness in this mapping</h3>
-<p><strong>Open</strong>, and someone should own writing two sentences on it.</p>
-<p>Property damage liability pays for damage to the <em>other</em> party’s vehicle. Driver assistance on the insured vehicle reduces the frequency of causing such damage, but the severity of the repair applies to a third-party vehicle that may not be equipped. Applying a severity uplift derived from collision coverage to a liability portfolio is therefore an approximation. It is a reasonable one if the vehicle fleet as a whole is becoming equipped, which is the scenario we are describing, but it should be stated rather than hidden.</p>
+<section id="what-the-severity-uplift-actually-measures" class="level3" data-number="6.3">
+<h3 data-number="6.3" class="anchored" data-anchor-id="what-the-severity-uplift-actually-measures"><span class="header-section-number">6.3</span> What the severity uplift actually measures</h3>
+<p>Status: <strong>fixed</strong>. Owned by presentation section 5.</p>
+<p>Now that both multipliers come from PDL, the coverage mismatch is gone. Two things remain worth saying, and the second is more interesting than the one it replaces.</p>
+<p><strong>Country.</strong> The multipliers are US experience; the data are French. Repair cost structures and liability rules differ. We keep this in the limitations register.</p>
+<p><strong>Mechanism.</strong> HLDI notes that the PDL severity gap is larger than sensor replacement costs alone can explain, and attributes part of it to crash avoidance removing slower, low-cost crashes from the claim mix, which raises the average of what remains. That matters for how we apply the uplift. We scale the mean and hold the coefficient of variation constant, which implicitly treats the whole uplift as every loss inflating. If part of it is a mix shift, the left tail is being removed instead, which raises the mean <strong>and lowers</strong> the CV.</p>
+<p>The direction is worth stating because it is useful to us. A genuine mix shift removes exactly the small losses that a low deductible would newly pick up, so it works in favour of Design B. That runs opposite to the ground-up truncation bias in the section above, which favours Design A. The two partially offset, and being able to say so is a stronger answer than naming either bias alone.</p>
 <hr>
 </section>
 </section>
@@ -2699,34 +2862,73 @@ window.Quarto = {
 </tr>
 <tr class="odd">
 <td>Per-claim limit <span class="math inline">\(L\)</span></td>
-<td>same</td>
-<td>same</td>
+<td>from a <code>SumInsured</code> band edge</td>
+<td>same value</td>
 </tr>
 </tbody>
 </table>
-<section id="the-calibration-that-makes-the-comparison-fair" class="level3" data-number="7.1">
-<h3 data-number="7.1" class="anchored" data-anchor-id="the-calibration-that-makes-the-comparison-fair"><span class="header-section-number">7.1</span> The calibration that makes the comparison fair</h3>
+<section id="portfolio-size" class="level3" data-number="7.1">
+<h3 data-number="7.1" class="anchored" data-anchor-id="portfolio-size"><span class="header-section-number">7.1</span> Portfolio size</h3>
+<p>Status: <strong>fixed</strong>. Simulate a fleet of <strong>1,000 vehicles</strong>, not the full 87,228 rows.</p>
+<p>This was previously unspecified and it is not a detail. At full portfolio size the aggregate diversifies, <span class="math inline">\(\mathrm{TVaR}_{99}/E[S]\)</span> sits close to 1, and the difference between the two designs disappears into rounding. A thousand-vehicle commercial fleet account keeps the tail a tail, and it matches the framing of the central question. State the number on the slide.</p>
+</section>
+<section id="the-per-claim-limit" class="level3" data-number="7.2">
+<h3 data-number="7.2" class="anchored" data-anchor-id="the-per-claim-limit"><span class="header-section-number">7.2</span> The per-claim limit</h3>
+<p>Status: <strong>fixed</strong>. Raised by Xiaoxiao on 6 September.</p>
+<p><span class="math inline">\(L\)</span> previously read “same” in both columns, which is not a value.</p>
+<p><strong><code>SumInsured</code> is a banded category, not a number.</strong> The validation lists levels such as <code>&lt;=7.6 Keur</code>, so it cannot supply a precise <span class="math inline">\(L\)</span>. It can still anchor one: take the upper edge of a high band as the limit and say that is where it came from, which is better than inventing a round figure. Fall back to the 99.5th percentile of the cleaned claim amounts if the bands turn out unusable, and say which you used. <code>Deduc</code> is banded the same way and is worth checking for a different reason: it tells us whether <span class="math inline">\(d = 1{,}000\)</span> and <span class="math inline">\(d = 250\)</span> sit inside the range of deductibles the portfolio actually sold, which is the check this dataset was chosen to make possible.</p>
+<p><span class="math inline">\(L\)</span> caps the <strong>insurer payment</strong>, not the ground-up loss, which matters because <span class="math inline">\(\alpha \neq 1\)</span> in Design B.</p>
+<p><strong>A common <span class="math inline">\(L\)</span> is not a common effect.</strong> Design A reaches the cap at a ground-up loss of <span class="math inline">\(L + 1{,}000\)</span>; Design B reaches it at <span class="math inline">\(1.25L + 250\)</span>. A hits the ceiling at a <em>smaller</em> loss, so A’s tail is truncated first and A can look better on TVaR for a reason that has nothing to do with risk sharing. This runs against the structural expectation described below, so it has to be tested rather than assumed away.</p>
+<p>Two things settle it:</p>
+<ol type="1">
+<li>Report the share of claims hitting the limit under each design. This is already in the required outputs but was not being read as a diagnostic.</li>
+<li><strong>Run the whole comparison a second time with no limit at all.</strong> If the ranking is unchanged with and without, one line on the slide closes the question. If it changes, that is the finding and we present it as such.</li>
+</ol>
+</section>
+<section id="what-we-expect-to-find-and-why-we-say-so-in-advance" class="level3" data-number="7.3">
+<h3 data-number="7.3" class="anchored" data-anchor-id="what-we-expect-to-find-and-why-we-say-so-in-advance"><span class="header-section-number">7.3</span> What we expect to find, and why we say so in advance</h3>
+<p>A deductible subtracts a fixed amount, so its relief becomes negligible as losses grow. Coinsurance is proportional, so it keeps clipping the same share however far into the tail you go. At equal expected cost, Design B should therefore show the lower <span class="math inline">\(\mathrm{TVaR}_{99}\)</span> for any right-skewed severity. Only a binding limit changes that, which is what the test above is for.</p>
+<p>This is a mechanism we can explain at a whiteboard, not a discovery. Present it that way. It also means the sensitivity contour may not flip anywhere in the grid: check that on a coarse 4x4 run before building the slide, and if there is no flip, plot the ratio <span class="math inline">\(\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)\)</span>, which varies, instead of a binary preference, which would be one solid colour.</p>
+</section>
+<section id="the-calibration-that-makes-the-comparison-fair" class="level3" data-number="7.4">
+<h3 data-number="7.4" class="anchored" data-anchor-id="the-calibration-that-makes-the-comparison-fair"><span class="header-section-number">7.4</span> The calibration that makes the comparison fair</h3>
 <p><strong>Calibrate the two designs to approximately equal expected insurer cost at baseline, then compare their tail behaviour and their effect on the policyholder.</strong></p>
 <p>Without this step the comparison is trivial and the presentation is weak: of course a higher deductible costs the insurer less. Holding expected cost equal turns the question into something that actually has an answer worth defending, which is how the two designs distribute risk rather than how much they cost on average.</p>
 <p>Tune <span class="math inline">\(d\)</span> in Design A, or <span class="math inline">\(\alpha\)</span> in Design B, until expected aggregate cost matches within a small tolerance. Report the calibrated values and the tolerance achieved.</p>
+<p><strong>Both negative binomial parameters scale with portfolio size.</strong> For <span class="math inline">\(n\)</span> independent vehicles each <span class="math inline">\(\mathrm{NB}(\mu, \theta)\)</span>, the portfolio total is <span class="math inline">\(\mathrm{NB}(n\mu,\; n\theta)\)</span>. Putting a portfolio-scale mean against a per-vehicle dispersion gives variance <span class="math inline">\(n\mu + (n\mu)^2/\theta\)</span>, which is wrong by orders of magnitude and would silently inflate every tail measure. An earlier version of this code block had exactly that error.</p>
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha, limit) {</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>), limit)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>simulate_aggregate <span class="ot">&lt;-</span> <span class="cf">function</span>(n_sims, lambda, size, sev_par, d, alpha, limit) {</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">vapply</span>(<span class="fu">seq_len</span>(n_sims), <span class="cf">function</span>(i) {</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    n <span class="ot">&lt;-</span> <span class="fu">rnbinom</span>(<span class="dv">1</span>, <span class="at">mu =</span> lambda, <span class="at">size =</span> size)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (n <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">return</span>(<span class="dv">0</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    x <span class="ot">&lt;-</span> <span class="fu">rlnorm</span>(n, sev_par<span class="sc">$</span>meanlog, sev_par<span class="sc">$</span>sdlog)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">insurer_payment</span>(x, d, alpha, limit))</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  }, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha, limit) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>), limit)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># so switching the fitted severity family is a one-line change.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>simulate_aggregate <span class="ot">&lt;-</span> <span class="cf">function</span>(n_sims, n_veh, mu_veh, theta_veh,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                               rsev, d, alpha, <span class="at">limit =</span> <span class="cn">Inf</span>) {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  N   <span class="ot">&lt;-</span> <span class="fu">rnbinom</span>(n_sims, <span class="at">mu =</span> n_veh <span class="sc">*</span> mu_veh, <span class="at">size =</span> n_veh <span class="sc">*</span> theta_veh)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  tot <span class="ot">&lt;-</span> <span class="fu">sum</span>(N)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  agg <span class="ot">&lt;-</span> <span class="fu">numeric</span>(n_sims)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (tot <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    y   <span class="ot">&lt;-</span> <span class="fu">insurer_payment</span>(<span class="fu">rsev</span>(tot), d, alpha, limit)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">rep.int</span>(<span class="fu">seq_len</span>(n_sims), N)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    s   <span class="ot">&lt;-</span> <span class="fu">tapply</span>(y, idx, sum)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    agg[<span class="fu">as.integer</span>(<span class="fu">names</span>(s))] <span class="ot">&lt;-</span> s     <span class="co"># sims with zero claims stay at 0</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  agg</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>tvar <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) <span class="fu">mean</span>(s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)])</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Monte Carlo standard error on the tail measure</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>tvar_se <span class="ot">&lt;-</span> <span class="cf">function</span>(s, <span class="at">p =</span> <span class="fl">0.99</span>) {</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  tail <span class="ot">&lt;-</span> s[s <span class="sc">&gt;=</span> <span class="fu">quantile</span>(s, p)]</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sd</span>(tail) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">length</span>(tail))</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>Use at least 100,000 simulations, set a seed, and report the Monte Carlo standard error on the tail measures. A tail estimate quoted without its own uncertainty invites an obvious question.</p>
+<p>Set a seed and run <strong>500,000 simulations</strong>, not 100,000. At 100k only about 1,000 draws sit above <span class="math inline">\(\mathrm{VaR}_{99}\)</span>, so the standard error on <span class="math inline">\(\mathrm{TVaR}_{99}\)</span> is not negligible. Vectorised, 500k costs seconds. Report the standard error alongside every tail figure; a tail estimate quoted without its own uncertainty invites an obvious question.</p>
 <hr>
 </section>
 </section>
@@ -2748,19 +2950,22 @@ window.Quarto = {
 <p><strong>Truncation and censoring diagnostics</strong> (required by the Track 4 brief):</p>
 <ul>
 <li>Share of claims falling entirely below the deductible under each design</li>
-<li>Share of claims hitting the limit</li>
+<li>Share of claims hitting the limit, <strong>reported separately for each design</strong></li>
+<li>Rows dropped in cleaning: how many zero, how many negative</li>
 <li>How each design changes what the insurer would observe in future data</li>
 </ul>
 <p><strong>Sensitivity:</strong></p>
 <ul>
-<li>Contour of the design preference over the <span class="math inline">\((\phi_N, \phi_X)\)</span> grid</li>
+<li>Contour over the <span class="math inline">\((\phi_N, \phi_X)\)</span> grid. Plot the ratio <span class="math inline">\(\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)\)</span> rather than a binary preference unless the coarse check shows the preference actually flips somewhere in the grid.</li>
+<li><strong>Unlimited run.</strong> The full comparison repeated with <span class="math inline">\(L = \infty\)</span>, to show the ranking is not an artefact of the common limit.</li>
 </ul>
 <p>Keep every figure legible from the back of a room. Two well-labelled charts beat six crowded ones, and the deck is capped at 20 slides including cover and figures.</p>
 <hr>
 </section>
 <section id="who-owns-what" class="level2" data-number="9">
 <h2 data-number="9" class="anchored" data-anchor-id="who-owns-what"><span class="header-section-number">9</span> Who owns what</h2>
-<p>Five sections in the brief, five of us. Each person owns one presentation section and presents it, two to four minutes each, no more than four slides each excluding the cover.</p>
+<p>Five sections in the brief, five of us. Each person owns one presentation section and presents it, two to four minutes each.</p>
+<p><strong>Three slides each, maximum.</strong> Four each would be 20 plus a cover plus a references slide, which is 22 against a cap of 20 including the cover. Three each gives 15, plus cover and references, for 17, and leaves room for the sensitivity figure to take a full slide.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -2809,17 +3014,28 @@ window.Quarto = {
 <p><strong>Section 4</strong> can be written against the <em>structure</em> of the result rather than the numbers. The comparison logic, which measures matter and why, and what would make each design preferable is all fixed by the contract designs section above. Draft it with placeholder numbers.</p>
 <p><strong>Section 5</strong> can be drafted almost entirely from this document. The limitations register below is the raw material, and it will not change when the simulation finishes.</p>
 </section>
-<section id="review" class="level3" data-number="9.2">
-<h3 data-number="9.2" class="anchored" data-anchor-id="review"><span class="header-section-number">9.2</span> Review</h3>
-<p>Xiaoxiao has hands-on P&amp;C experience and has agreed to review the modelling choices, mainly the frequency and severity distributions and the tail measures, and to add anything the limitations register is missing from a practitioner’s point of view. This sits alongside presentation section 5 rather than on top of it.</p>
+<section id="splitting-assumptions-from-limitations" class="level3" data-number="9.2">
+<h3 data-number="9.2" class="anchored" data-anchor-id="splitting-assumptions-from-limitations"><span class="header-section-number">9.2</span> Splitting assumptions from limitations</h3>
+<p>Status: <strong>fixed</strong>. Proposed by Xiaoxiao on 6 September, adopted with one change.</p>
+<p>The limitations register mixes two different things: assumptions any actuarial model would make, and assumptions whose violation moves our headline number in a direction we can name. Presentation section 2 takes the first kind, stated once and briefly, so that section 5 can go deeper on the second kind.</p>
+<p>The dividing test is whether a reader could say <strong>which way</strong> the assumption pushes our result.</p>
+<p><strong>To presentation section 2, as an assumptions slide:</strong> no policyholder behaviour (a scope boundary, not a signed bias); multi-year pooling with no inflation adjustment; independence stated plainly as part of defining the collective risk model.</p>
+<p><strong>Staying with presentation section 5, as signed biases:</strong> the ground-up gap; the country mismatch; driver assistance is not full automation; independence <em>again</em>, but as a directional bias rather than a definition, because correlated sensor or software failure makes the real aggregate tail fatter than what we report and therefore makes our TVaR optimistic; and expenses and recoveries, pending the count of negative claim rows.</p>
+<p>Section 2 defines the assumption; section 5 says what it costs us. Hoyong writes the section 2 version so it sets section 5 up rather than repeating it.</p>
 </section>
-<section id="where-things-live" class="level3" data-number="9.3">
-<h3 data-number="9.3" class="anchored" data-anchor-id="where-things-live"><span class="header-section-number">9.3</span> Where things live</h3>
+<section id="review" class="level3" data-number="9.3">
+<h3 data-number="9.3" class="anchored" data-anchor-id="review"><span class="header-section-number">9.3</span> Review</h3>
+<p>Xiaoxiao has hands-on P&amp;C experience and has agreed to review the modelling choices, mainly the frequency and severity distributions and the tail measures, and to add anything the limitations register is missing from a practitioner’s point of view. This sits alongside presentation section 5 rather than on top of it.</p>
+<p>Her 6 September review produced the per-claim limit test now written into the contract designs section, and the assumptions split above. Both are adopted.</p>
+</section>
+<section id="where-things-live" class="level3" data-number="9.4">
+<h3 data-number="9.4" class="anchored" data-anchor-id="where-things-live"><span class="header-section-number">9.4</span> Where things live</h3>
 <p>Code and this specification live in the GitHub repository. Documents, slides, the brief and any other shared files live in the Google Drive folder that Faye set up. Nobody has to learn a new tool.</p>
 </section>
-<section id="one-open-role" class="level3" data-number="9.4">
-<h3 data-number="9.4" class="anchored" data-anchor-id="one-open-role"><span class="header-section-number">9.4</span> One open role</h3>
-<p><strong>Slide template owner.</strong> Faye has offered to look for templates. The brief requires the template to be consistent across all slides, and five people building slides independently produces five decks and a bad evening right before the presentation. Whoever owns this should share a template before anyone starts making slides.</p>
+<section id="one-shared-deck" class="level3" data-number="9.5">
+<h3 data-number="9.5" class="anchored" data-anchor-id="one-shared-deck"><span class="header-section-number">9.5</span> One shared deck</h3>
+<p><strong>Owner: Faye.</strong> Not a design exercise. The point is not aesthetics, which carry no marks, but that five people building slides in five separate files produces a two-hour merge on the Sunday night before. One Google Slides file, link shared, everyone adds their own slides inside it. Whatever theme it opens with is fine. Needed before anyone starts building.</p>
+<p>Related: there are currently two Drive folders, Faye’s and Qiwei’s. Pick one and move everything into it.</p>
 <hr>
 </section>
 </section>
@@ -2832,9 +3048,12 @@ window.Quarto = {
 <li><p><strong>Driver assistance is not full automation.</strong> HLDI measures vehicles with assistance bundles, not autonomous vehicles. We use it as the best available observed evidence for the direction and rough size of the shift, not as a measurement of automation.</p></li>
 <li><p><strong>Independence assumed.</strong> Claims are treated as independent. Vehicles sharing software or sensor hardware plausibly have correlated failure modes, which would fatten the aggregate tail beyond what we report. Our tail measures are therefore likely optimistic. We did not model this; it is the obvious next step.</p></li>
 <li><p><strong>Anonymised categorical levels.</strong> Risk characteristics in this dataset have no published meaning, so we cannot segment or interpret by risk class.</p></li>
-<li><p><strong>Single year, single portfolio.</strong> No trend, no inflation adjustment, no repair cost index. Repair costs have been rising faster than general inflation, which would push severity up further.</p></li>
+<li><p><strong>Four years pooled, no inflation adjustment.</strong> An earlier version of this document assumed a single year. The training data covers four, with a fifth held out as test data that we do not use. We pool all four and let the exposure offset put frequency on an annual basis, but we apply no trend or repair cost index to severity. Repair costs have been rising faster than general inflation, so our fitted severity understates current levels, and the understatement grows with the age of the earliest year in the pool. Pooling also means one policy contributes several rows, so the observations are not strictly independent across time; the negative binomial absorbs part of this as unobserved heterogeneity but it is not a panel model.</p></li>
 <li><p><strong>No policyholder behaviour.</strong> We compute retention mechanically. In reality a higher deductible changes reporting behaviour and lapse rates, which would feed back into both frequency and portfolio composition.</p></li>
-<li><p><strong>Expenses and recoveries excluded.</strong> No claim handling expense, salvage, or subrogation. All are absent from the public data, per Qiwei’s inventory.</p></li>
+<li><p><strong>13% of claims are dropped and we cannot say why they are negative.</strong> Claim handling expense is absent from the data outright. Separately, the validation found <strong>597 negative and 2 zero <code>ClaimCharge</code> values out of 4,568, or 13.1%</strong>, all of which leave the severity fit because lognormal and gamma need positive support.</p>
+<p>We tested two explanations and both failed. Direct-compensation recoveries: ruled out, since 570 of the 597 sit in the ordinary-claim category and the highest compensation-rate group has no negatives at all. Reserve movements on unsettled claims: refuted, since only 41 rows are unsettled and none of those are negative. The public file does not carry the transaction detail that would settle it.</p>
+<p>What we can say about direction. Dropping the 599 removes accidents that closed at or below zero for the insurer, so the surviving severity is conditional on the insurer having net paid and <strong>mean severity is overstated</strong>, while the claim count falls about 13% and <strong><span class="math inline">\(\lambda\)</span> is understated</strong>. If the negatives are recoveries of any kind, our amounts are net rather than gross and severity is understated on that axis too, which runs opposite to the truncation bias in limitation 1.</p>
+<p>This moves the <strong>levels</strong> of <span class="math inline">\(E[S]\)</span> and the tail measures more than it moves the <strong>ranking</strong> of the two designs, since both designs are fed the same severity distribution. Our claim is a ranking, so it survives this better than the absolute figures do. Say that rather than pretending the effect is small.</p></li>
 </ol>
 <hr>
 </section>
@@ -2849,7 +3068,7 @@ window.Quarto = {
 <li>What is the most important assumption, and which way does it bias the result?</li>
 <li>Why did you hold expected cost equal between the two designs?</li>
 <li>What does TVaR at 99% mean in plain language?</li>
-<li>What is missing from your data that you would want before using this in practice?</li>
+<li>What is missing from your data that you would want before using this in practice? (Answer: ground-up losses; an accident date; and claim transaction history with payments separated from reserve movements, which is what would explain the 13% of negative amounts we had to drop.)</li>
 </ul>
 <p>The second, third and sixth are the ones most likely to catch someone out, because they are choices we made rather than facts we looked up.</p>
 <hr>
@@ -2859,7 +3078,7 @@ window.Quarto = {
 <p>Sources to carry onto the final reference slide.</p>
 <ul>
 <li>Dutang, C. and Charpentier, A. <em>CASdatasets</em>: Insurance datasets. <code>pricingame</code> reference, French Institute of Actuaries Pricing Games. <a href="https://dutangc.github.io/CASdatasets/reference/pricingame.html" class="uri">https://dutangc.github.io/CASdatasets/reference/pricingame.html</a></li>
-<li>Highway Loss Data Institute. Comparison of 2017-22 model year vehicles with and without driver assistance bundles. Analysis by M. Moore, IIHS-HLDI, August 2026.</li>
+<li>Moore, M. (IIHS-HLDI), analysis published 11 August 2026, citing an HLDI comparison of 2017-22 model year vehicles with and without a driver assistance bundle. Source of both the collision figures and the property damage liability severity and frequency figures used in our baseline.</li>
 <li>Highway Loss Data Institute. <em>Compendium of HLDI collision avoidance research</em>, Bulletin Vol. 40, No. 4, April 2023.</li>
 <li>Ye, Q. <em>Public Insurance Dataset Candidates: Auto Deductible vs Coinsurance Simulation.</em> Six-dataset inventory with variable availability matrix.</li>
 <li>MFI Refresher Group Presentation Project, Student Project Brief, Track 4.</li>
