@@ -19,7 +19,7 @@ This generated report records input validation, cleaning rules, variable meaning
 | pg16trainclaim: missing values | PASS | 0 missing cells across all columns. |
 | pg16test: types | PASS | Identifiers, dates, numeric fields, and binary fields converted without new missing values. |
 | pg16test: missing values | PASS | 0 missing cells across all columns. |
-| Train/test feature columns | PASS | Train-only: none; test-only: none. ClaimNb is a training outcome. |
+| Train/test feature columns | PASS | Train-only: none; test-only: none. ClaimNb and derived ClaimNbClean are training outcomes. |
 | Categorical levels | WARN | SumInsured: train-only ['<=7.6 Keur'], test-only none; PolicyCateg: train-only ['C2'], test-only none |
 | Train/test feature types | PASS | Mismatched types: none; shared unordered category definitions. |
 | pg16trainpol: PolicyID present | PASS | 0 missing or blank identifiers. |
@@ -35,12 +35,14 @@ This generated report records input validation, cleaning rules, variable meaning
 | Claim counts per PolicyID (before filtering) | PASS | 0 IDs disagree after aggregating counts for validation only. |
 | Claim combination uniqueness | WARN | Before filtering: 3 duplicate occurrences beyond the first among 4,568 rows; 0 incomplete keys not checkable; After filtering: 3 duplicate occurrences beyond the first among 3,969 rows; 0 incomplete keys not checkable. |
 | ClaimCharge filter | PASS | 4,568 input rows; removed 597 negative and 2 zero charges (599 rows); retained 3,969 rows, including 0 missing charges. Supplied policy ClaimNb values are unchanged. |
+| ClaimNbClean: matching | PASS | 3,969/3,969 positive-charge cleaned claim rows match one complete, unique (PolicyID, LicNb, Year, BeginDate, EndDate) policy key; 0 unassignable rows. |
+| ClaimNbClean: counts | PASS | sum(ClaimNbClean) = 3,969; positive-charge cleaned claim rows = 3,969; 83,501 policy rows have zero counts; 0 uncheckable counts; 588 counts differ from supplied ClaimNb, which is unchanged. Storage: Int64. |
 
 ## Processing choices
 
 Coverage dates and the expected Exposure formula follow the [CASdatasets documentation](https://dutangc.github.io/CASdatasets/reference/pricingame.html). R dates are converted from days since 1970-01-01. BeginDate/EndDate use datetime64[ns] in all three tables.
 
-PolicyID/LicNb use strings. Year, VehiclNb, ClaimNb, CompRate, and SettlYear use nullable integers; Exposure/ClaimCharge use nullable floats. CompanyCreation maps No/Yes to False/True; DirectComp maps 0/1 to False/True (nullable booleans).
+PolicyID/LicNb use strings. Year, VehiclNb, ClaimNb, ClaimNbClean, CompRate, and SettlYear use nullable integers; Exposure/ClaimCharge use nullable floats. CompanyCreation maps No/Yes to False/True; DirectComp maps 0/1 to False/True (nullable booleans).
 
 Policy category labels use shared unordered categories, including VehiclPower (P1-P11 labels), VehiclAge, Deduc, and SumInsured. Unknown is retained as a supplied category, not treated as a null. Category levels are aligned using observed labels from both policy files; no numeric ranks are assigned.
 
@@ -54,9 +56,11 @@ Project interpretation: negative or zero claim charges reflect claims where the 
 
 Claim rows with ClaimCharge <= 0 are removed from clean_train_claim. Claim relationship and count reconciliation checks use the input claims before removal. Policy ClaimNb retains its supplied counts, so the filtered claim row count is lower by the number removed. Missing charges are retained and reported. Policy rows and raw files are preserved; tables are not joined or concatenated, and missing values are not imputed. FAIL prevents export; WARN records findings for review.
 
+ClaimNbClean counts rows with ClaimCharge > 0 in clean_train_claim for each (PolicyID, LicNb, Year, BeginDate, EndDate) training policy key. Counts are aggregated before mapping to policies. Complete, unique policy keys with no positive claims receive zero; retained duplicate claim rows each count, and missing charges do not count. Incomplete or nonunique policy keys receive missing counts; positive claims without an unambiguous policy match prevent export. This derived training outcome is absent from test data because no test claim outcomes are supplied. Supplied ClaimNb and every policy row are preserved.
+
 ## Variable inventory
 
-Detected 29 distinct variable names across 58 table columns: 26 documented source variables and 3 pipeline diagnostics. Any undocumented variables are listed separately.
+Detected 30 distinct variable names across 59 table columns: 26 documented source variables and 4 derived variables. Any undocumented variables are listed separately.
 
 Train = clean_train_policy; Claims = clean_train_claim; Test = clean_test_policy. Distinct counts exclude missing values; '-' means the variable is absent. Storage dtypes are detected after processing.
 
@@ -93,21 +97,22 @@ Official meanings below summarize the [PG16 reference](https://dutangc.github.io
 | SettlYear | Numerical (discrete year) | Int64 | - / 5 / - | Year in which settlement occurs. |
 | ClaimCharge | Numerical (continuous monetary amount) | Float64 | - / 3,806 / - | Charge associated with a claim. |
 
-### Derived diagnostics
+### Derived variables
 
 | Variable | Statistical classification | Storage dtype | Distinct Train/Claims/Test | Pipeline meaning |
 |---|---|---|---|---|
+| ClaimNbClean | Numerical (discrete count) | Int64 | 6 / - / - | Number of positive-charge cleaned claim rows matching the training policy's (PolicyID, LicNb, Year, BeginDate, EndDate); zero when none match. Missing for an incomplete or nonunique policy key. |
 | ExposureFromDates | Numerical (continuous fraction) | Float64 | 337 / - / 335 | Coverage duration in days divided by 365, calculated by this pipeline. |
 | ExposureDifference | Numerical (continuous signed difference) | Float64 | 224 / - / 192 | Supplied Exposure minus ExposureFromDates. |
 | ExposureMismatch | Binary indicator (nominal) | boolean | 2 / - / 2 | True when the absolute exposure difference exceeds the configured tolerance; missing if uncheckable. |
 
-Interpretation notes: PolicyAgeCateg, VehiclAge, and Deduc contain interpretable age/amount bands; PayFreq contains year/semester/quarter labels. SumInsured's monetary bands have a natural order, while its Unknown category has no rank. FleetSizeCateg (S1/S2) and VehiclPower (P1-P11) retain nominal treatment because their code meanings/order are undisclosed. VehiclNb values 1/2 remain vehicle counts. CompRate's observed 0/50/100 values remain percentages. SettlYear includes 0, whose meaning the reference does not explain. The three derived diagnostics have pipeline definitions, not official dataset definitions.
+Interpretation notes: PolicyAgeCateg, VehiclAge, and Deduc contain interpretable age/amount bands; PayFreq contains year/semester/quarter labels. SumInsured's monetary bands have a natural order, while its Unknown category has no rank. FleetSizeCateg (S1/S2) and VehiclPower (P1-P11) retain nominal treatment because their code meanings/order are undisclosed. VehiclNb values 1/2 remain vehicle counts. CompRate's observed 0/50/100 values remain percentages. SettlYear includes 0, whose meaning the reference does not explain. Derived variables have pipeline definitions, not official dataset definitions.
 
 ## Outputs
 
 | File in data/processed | Rows | Columns |
 |---|---:|---:|
-| clean_train_policy.parquet | 87,228 | 25 |
+| clean_train_policy.parquet | 87,228 | 26 |
 | clean_train_claim.parquet | 3,969 | 9 |
 | clean_test_policy.parquet | 32,772 | 24 |
 

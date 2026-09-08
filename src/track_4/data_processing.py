@@ -4,6 +4,7 @@ Schema reference: https://dutangc.github.io/CASdatasets/reference/pricingame.htm
 Claim input checks precede removal of rows with ClaimCharge <= 0. The tables
 remain separate; no deduplication or imputation is performed. Structural/type
 errors and broken claim checks prevent export.
+ClaimNbClean counts positive retained claim rows per training coverage period.
 """
 
 from __future__ import annotations
@@ -46,7 +47,6 @@ CATEGORY_COLUMNS = (
 )
 INTEGER_COLUMNS = ("Year", "VehiclNb", "ClaimNb", "CompRate", "SettlYear")
 FLOAT_COLUMNS = ("Exposure", "ClaimCharge")
-EXPOSURE_COLUMNS = ("ExposureFromDates", "ExposureDifference", "ExposureMismatch")
 OUTPUT_NAMES = {
     "pg16trainpol": "clean_train_policy",
     "pg16trainclaim": "clean_train_claim",
@@ -86,6 +86,12 @@ VARIABLE_DEFINITIONS = {
     "SettlYear": ("Numerical (discrete year)", "Year in which settlement occurs."),
 }
 DERIVED_VARIABLE_DEFINITIONS = {
+    "ClaimNbClean": (
+        "Numerical (discrete count)",
+        "Number of positive-charge cleaned claim rows matching the training policy's "
+        "(PolicyID, LicNb, Year, BeginDate, EndDate); zero when none match. "
+        "Missing for an incomplete or nonunique policy key.",
+    ),
     "ExposureFromDates": (
         "Numerical (continuous fraction)", "Coverage duration in days divided by 365, calculated by this pipeline.",
     ),
@@ -340,6 +346,40 @@ def _process_claims(claims: pd.DataFrame, checks: list[Check]) -> pd.DataFrame:
     return filtered
 
 
+def _add_clean_claim_counts(policy: pd.DataFrame, claims: pd.DataFrame, checks: list[Check]) -> None:
+    """Map aggregated positive claim counts onto complete, unique policy keys.
+
+    Preserve every policy row and the supplied ClaimNb. Uncheckable policy keys
+    receive a missing count; positive claims without one unambiguous match fail
+    validation. Retained duplicate claim rows each contribute to the count.
+    """
+    key = list(POLICY_KEY_COLUMNS)
+    assignable = policy[key].notna().all(axis=1) & ~policy.duplicated(key, keep=False)
+    policy_index = pd.MultiIndex.from_frame(policy.loc[assignable, key])
+    positive = claims.loc[claims["ClaimCharge"].gt(0).fillna(False)]
+    positive_index = pd.MultiIndex.from_frame(positive[key])
+    unmatched = int((~positive_index.isin(policy_index)).sum())
+    checks.append(Check(
+        "ClaimNbClean: matching", "FAIL" if unmatched else "PASS",
+        f"{len(positive) - unmatched:,}/{len(positive):,} positive-charge cleaned claim rows match "
+        f"one complete, unique ({', '.join(key)}) policy key; {unmatched:,} unassignable rows.",
+    ))
+
+    # Aggregate first, then map counts without multiplying or removing policy rows.
+    counts = positive.groupby(key, sort=False).size().reindex(policy_index, fill_value=0)
+    policy["ClaimNbClean"] = pd.Series(pd.NA, index=policy.index, dtype="Int64")
+    policy.loc[assignable, "ClaimNbClean"] = counts.astype("Int64").array
+    clean_counts = policy["ClaimNbClean"]
+    total, missing = int(clean_counts.sum()), int(clean_counts.isna().sum())
+    changed = int(clean_counts.ne(policy["ClaimNb"]).sum())
+    checks.append(Check(
+        "ClaimNbClean: counts", "FAIL" if total != len(positive) else "WARN" if missing else "PASS",
+        f"sum(ClaimNbClean) = {total:,}; positive-charge cleaned claim rows = {len(positive):,}; "
+        f"{int(clean_counts.eq(0).sum()):,} policy rows have zero counts; {missing:,} uncheckable counts; "
+        f"{changed:,} counts differ from supplied ClaimNb, which is unchanged. Storage: Int64.",
+    ))
+
+
 def clean_data(
     raw_tables: dict[str, pd.DataFrame],
     exposure_tolerance: float = DEFAULT_EXPOSURE_TOLERANCE,
@@ -351,6 +391,7 @@ def clean_data(
     ExposureMismatch is nullable when dates or exposure are missing.
     Claim relationships/counts are checked before removing nonpositive charges;
     supplied policy ClaimNb values and missing claim charges are preserved.
+    ClaimNbClean is then derived for training policies from positive cleaned claims.
     """
     if not isfinite(exposure_tolerance) or exposure_tolerance < 0:
         raise ValueError("Exposure tolerance must be finite and nonnegative.")
@@ -364,14 +405,14 @@ def clean_data(
         missing = sorted(set(required) - set(frame.columns))
         extra = sorted(set(frame.columns) - set(required))
         duplicate_columns = frame.columns[frame.columns.duplicated()].tolist()
-        reserved = sorted(set(EXPOSURE_COLUMNS) & set(frame.columns))
+        reserved = sorted(set(DERIVED_VARIABLE_DEFINITIONS) & set(frame.columns))
         schema_error = bool(missing or duplicate_columns or reserved or frame.empty)
         checks.append(Check(
             f"{name}: columns", "FAIL" if schema_error else "WARN" if extra else "PASS",
             f"{len(frame):,} rows, {len(frame.columns)} columns; "
             f"missing: {missing or 'none'}; unexpected: {extra or 'none'}"
             + (f"; duplicate columns: {duplicate_columns}" if duplicate_columns else "")
-            + (f"; reserved diagnostic columns already present: {reserved}" if reserved else "")
+            + (f"; reserved derived columns already present: {reserved}" if reserved else "")
             + ("; dataset is empty" if frame.empty else "") + ".",
         ))
     outputs = {OUTPUT_NAMES[name]: frame for name, frame in tables.items()}
@@ -396,7 +437,8 @@ def clean_data(
     checks.append(Check(
         "Train/test feature columns", "PASS" if same_features else "FAIL",
         f"Train-only: {sorted(set(train_features) - set(test.columns)) or 'none'}; "
-        f"test-only: {sorted(set(test.columns) - set(train_features)) or 'none'}. ClaimNb is a training outcome.",
+        f"test-only: {sorted(set(test.columns) - set(train_features)) or 'none'}. "
+        "ClaimNb and derived ClaimNbClean are training outcomes.",
     ))
     category_differences = []
     for column in CATEGORY_COLUMNS:
@@ -443,10 +485,13 @@ def clean_data(
             f"{differences:,} IDs disagree after aggregating counts for validation only.",
         ))
     tables["pg16trainclaim"] = _process_claims(claims, checks)
+    _add_clean_claim_counts(train, tables["pg16trainclaim"], checks)
 
     # Align feature order while retaining any unexpected columns for review.
     for name, frame in tables.items():
         original_columns = list(REQUIRED_COLUMNS[name])
+        if name == "pg16trainpol":
+            original_columns.append("ClaimNbClean")
         remainder = [column for column in frame if column not in original_columns]
         outputs[OUTPUT_NAMES[name]] = frame.loc[:, original_columns + remainder]
     return result
@@ -469,7 +514,7 @@ def _variable_inventory_lines(inventory: pd.DataFrame) -> list[str]:
         "", "## Variable inventory", "",
         f"Detected {inventory['variable'].nunique()} distinct variable names across "
         f"{len(inventory):,} table columns: {original_count} documented source variables and "
-        f"{derived_count} pipeline diagnostics. Any undocumented variables are listed separately.",
+        f"{derived_count} derived variables. Any undocumented variables are listed separately.",
         "",
         "Train = clean_train_policy; Claims = clean_train_claim; Test = clean_test_policy. "
         "Distinct counts exclude missing values; '-' means the variable is absent. "
@@ -484,7 +529,7 @@ def _variable_inventory_lines(inventory: pd.DataFrame) -> list[str]:
     for origin, title, meaning_heading in (
         ("Official", "Source variables", "Official meaning (summary)"),
         ("Undocumented", "Undocumented variables", "Meaning"),
-        ("Derived", "Derived diagnostics", "Pipeline meaning"),
+        ("Derived", "Derived variables", "Pipeline meaning"),
     ):
         subset = inventory.loc[inventory["origin"] == origin]
         if subset.empty:
@@ -516,7 +561,7 @@ def _variable_inventory_lines(inventory: pd.DataFrame) -> list[str]:
         "retain nominal treatment because their code meanings/order are undisclosed. "
         "VehiclNb values 1/2 remain vehicle counts. CompRate's observed 0/50/100 values remain percentages. "
         "SettlYear includes 0, whose meaning the reference does not explain. "
-        "The three derived diagnostics have pipeline definitions, not official dataset definitions.",
+        "Derived variables have pipeline definitions, not official dataset definitions.",
     ]
     return lines
 
@@ -546,7 +591,7 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         f"Coverage dates and the expected Exposure formula follow the [CASdatasets documentation]({DOCUMENTATION_URL}). "
         "R dates are converted from days since 1970-01-01. BeginDate/EndDate use datetime64[ns] in all three tables.",
         "",
-        "PolicyID/LicNb use strings. Year, VehiclNb, ClaimNb, CompRate, and SettlYear use nullable integers; "
+        "PolicyID/LicNb use strings. Year, VehiclNb, ClaimNb, ClaimNbClean, CompRate, and SettlYear use nullable integers; "
         "Exposure/ClaimCharge use nullable floats. CompanyCreation maps No/Yes to False/True; "
         "DirectComp maps 0/1 to False/True (nullable booleans).",
         "",
@@ -575,6 +620,14 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
         "Missing charges are retained and reported. Policy rows and raw files are preserved; "
         "tables are not joined or concatenated, and missing values are not imputed. "
         "FAIL prevents export; WARN records findings for review.",
+        "",
+        "ClaimNbClean counts rows with ClaimCharge > 0 in clean_train_claim for each "
+        f"({', '.join(POLICY_KEY_COLUMNS)}) training policy key. Counts are aggregated before mapping to policies. "
+        "Complete, unique policy keys with no positive claims receive zero; retained duplicate claim rows each count, "
+        "and missing charges do not count. Incomplete or nonunique policy keys receive missing counts; "
+        "positive claims without an unambiguous policy match prevent export. "
+        "This derived training outcome is absent from test data because no test claim outcomes are supplied. "
+        "Supplied ClaimNb and every policy row are preserved.",
     ]
     if exported:
         lines.extend(_variable_inventory_lines(result.variable_inventory))

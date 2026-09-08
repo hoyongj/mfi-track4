@@ -2,7 +2,7 @@
 
 Read-only analysis of `data/processed/clean_train_claim.parquet` (3,969 rows,
 9 columns) against `data/processed/clean_train_policy.parquet` (87,228 rows,
-25 columns). All saved claim charges are positive; none are missing.
+26 columns). All saved claim charges are positive; none are missing.
 
 [data_processing.md](data_processing.md) records the cleaning rules, removal totals
 and liability/recourse explanation, official variable meanings, types, and pipeline
@@ -105,6 +105,10 @@ Yes, before filtering, when ClaimNb is summed across all coverage periods for
 each key. After cleaning, retained claim counts are lower because negative and
 zero charges were excluded. The corresponding policy rows and supplied ClaimNb
 values remain unchanged.
+
+The retained positive-claim count is now saved as ClaimNbClean in the training
+policy table. It reconciles with the cleaned claims at every policy coverage key;
+its definition and validation are in [data_processing.md](data_processing.md#derived-variables).
 
 This comparison follows the [retained correction](#negative-charge-correction)
 and the [processing choices](data_processing.md#processing-choices).
@@ -216,6 +220,9 @@ for _, row in duplicates.iterrows():
 # Include every policy period, including those with zero retained claims.
 expected = policy.set_index(key)['ClaimNb']
 observed = sizes.reindex(expected.index, fill_value=0)
+saved_clean_counts = policy.set_index(key)['ClaimNbClean']
+pd.testing.assert_series_equal(saved_clean_counts, observed.astype('Int64'), check_names=False)
+print('sum(ClaimNbClean):', int(saved_clean_counts.sum()))
 before = input_claim.groupby(key).size().reindex(expected.index, fill_value=0)
 dropped = removed.groupby(key).size().reindex(expected.index, fill_value=0)
 gap = expected - observed
