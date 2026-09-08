@@ -57,9 +57,10 @@ Nobody needs to reread the whole document. These are the substantive changes.
 
 - **13.1% of claims are non-positive.** 597 negative and 2 zero out of 4,568. Cleaned
   claim count is 3,969 and $\lambda$ falls about 13%. Limitation 8 rewritten.
-- **We do not know why they are negative.** Two explanations tested and both failed:
-  direct-compensation recoveries, and reserve movements on unsettled claims. Saying so
-  is stronger than guessing.
+- **The negatives are explained.** Per the CASdatasets documentation they are claims
+  where our insured's liability was not engaged, recovered through legal recourse.
+  Excluding them is a scope decision, not a cleaning convenience, and $\lambda$ is now
+  an at-fault frequency. Two earlier hypotheses failed and are kept on the record.
 - **The claim table is one row per accident, but the earlier reason was wrong.** The
   date-uniqueness check had been run on the *policy* table. The claim table's date
   combination is **not** unique. The real evidence is `ClaimNb`: 6 disagreements out of
@@ -68,10 +69,10 @@ Nobody needs to reread the whole document. These are the substantive changes.
   period copied across, matching at 100%.
 - **The supplied `ClaimNb` column must not be used** after cleaning. It reconciles to
   the uncleaned 4,568. Rebuild counts from the cleaned claim table.
-- **The exposure mismatch has a likely explanation.** Supplied `Exposure` looks like
-  vehicle-years, `VehiclNb` times period length, rounded to 2dp. The validation check
-  omits `VehiclNb`, which is why it fires on 82,435 rows. Not yet verified; one line
-  in the spec settles it.
+- **The exposure mismatch is unresolved, and the vehicle-years guess was wrong.** The
+  documentation defines `Exposure` as period length over 365, so the pipeline check is
+  right and the data does not match its own documentation. We keep the supplied column
+  regardless.
 - **`SumInsured` is a banded category, not a number**, so $L$ takes a band edge rather
   than a value read off the field.
 - **The train-only categorical levels are confirmed harmless**: train is the superset,
@@ -80,7 +81,7 @@ Nobody needs to reread the whole document. These are the substantive changes.
 **Decisions and corrections:**
 
 - **Install path corrected**; `xts`/`zoo` were missing from the prerequisites.
-- **The data is four years, not one.** Limitation 6 rewritten.
+- **The data is three years (2011-2013), not one.** Limitation 6 rewritten.
 - **A policy row is a covered vehicle over a period, not a policy.** Do not merge or
   split. The claim table is already one row per accident; do not aggregate it.
 - **Severity multiplier changed from 1.10 to 1.15.** The PDL severity figure exists in
@@ -230,11 +231,13 @@ matters is vehicle time on risk, not the count of policy numbers. Each row is on
 observation carrying its own exposure, and claims attach to the row they fall in.
 This is the standard vehicle-year construction.
 
-**The training data covers four years, not one.** A fifth year is held out as
-`pg16test` (32,772 rows), which we do not use. An earlier version of this document
-assumed a single year; that was wrong and the limitations register has been corrected.
-We pool all four years. The exposure offset already puts everything on an annual basis,
-so pooling still yields an annual $\lambda$ and gives us four times the data.
+**The training data covers three years, 2011 to 2013.** A fourth year, 2014, is held
+out as `pg16test` (32,772 rows), which we do not use. An earlier version of this
+document assumed a single year, and a later one said four; both were wrong. The
+variable inventory in `results/data_processing.md` shows three distinct `Year` values
+in training and one in test. We pool all three years. The exposure offset already puts
+everything on an annual basis, so pooling still yields an annual $\lambda$ and gives us
+three times the data.
 
 **The claim table is one row per accident.** Verified on 7 September and recorded in
 `results/claim_table_checks.md`.
@@ -264,41 +267,38 @@ question. It does not matter for us: an intercept-only frequency model needs the
 per exposure period, not the day each accident happened. Say this if asked what is
 missing from the data.
 
-### The exposure mismatch, resolved
+### The exposure mismatch
 
-Status: **fixed**. This was Qiwei's original point 2 and it now has an explanation
-rather than a shrug.
+Status: **unresolved, and we use the supplied column anyway.** This was Qiwei's
+original point 2.
 
 The validation flags 82,435 of 87,228 rows where the supplied `Exposure` differs from
 `(EndDate - BeginDate) / 365`, with 18,052 rows off by more than a rounding tolerance
 and a maximum gap of 0.166.
 
-Look at the largest discrepancies and the pattern is immediate:
+The CASdatasets documentation defines `Exposure` as exactly that quantity: the
+difference between `EndDate` and `BeginDate` divided by 365. **So the pipeline check
+implements the documented formula correctly, and the data still does not satisfy it.**
+The discrepancy is in the file, not in our code.
 
-| PolicyID | Period | Days | From dates | Supplied | Ratio |
-|---|---|---:|---:|---:|---:|
-| 2954 | 2012-02-03 to 2012-04-03 | 60 | 0.164 | 0.33 | 2.01 |
-| 5515 | 2012-05-16 to 2012-06-17 | 32 | 0.088 | 0.18 | 2.05 |
-| 17983 (test) | 2014-01-01 to 2014-11-30 | 333 | 0.912 | 0.92 | 1.01 |
-
-**Supplied exposure is vehicle-years, not policy-years.** It appears to be
-`VehiclNb` times the period length, rounded to two decimals. The check in the pipeline
-computes only the period length, which is why it fires on every multi-vehicle row. The
-rounding to 2dp explains the remaining small differences: half a hundredth is 0.005,
-which is exactly the benchmark that 18,052 rows exceed, and those are the multi-vehicle
-ones.
-
-This is a hypothesis with strong support, not a verified fact. One line settles it:
+An earlier version of this document guessed that `Exposure` was vehicle-years,
+`VehiclNb` times the period length, on the strength of three examples whose ratios were
+2.01, 2.05 and 1.01, and the fact that `VehiclNb` only takes values 1 and 2. The
+documentation rules that out as the *definition*. It may still describe what the
+numbers happen to be, and one line would tell us:
 
 ```python
 (pol["Exposure"] / (pol["VehiclNb"] * pol["ExposureFromDates"])).describe()
 ```
 
-If that clusters at 1.0, the matter is closed. Either way **we keep the supplied
-`Exposure` column**, and if the hypothesis holds we can say why rather than saying we
-trusted the insurer's number. It also confirms the modelling choice above: the
-denominator we want is vehicle time on risk, and that is what the supplied column
-already measures.
+If that clusters at 1.0, then the supplied values were computed on a vehicle basis
+despite the documented formula, and we can say so. If it does not, we simply record
+that the documented formula does not reproduce the column.
+
+**Either way we keep the supplied `Exposure`.** It is the insurer's own measure of time
+on risk, and a derived quantity that contradicts the data's own documentation is not a
+better substitute. Note that this rescales $\lambda$ by a few percent at most, while
+our scenario shifts frequency by 40%, so it cannot change the conclusion.
 
 ### Cleaning the claim amounts
 
@@ -322,23 +322,37 @@ severity fit. Two consequences follow and neither is optional:
    net positive, so the surviving severity distribution is conditional on the insurer
    having net paid. That pushes mean severity up while frequency goes down.
 
-**We do not know what the negatives are, and we tested two explanations that failed.**
+**The negatives are claims where our insured was not at fault.** The CASdatasets
+documentation states, for the 2017 Pricing Game's `claim_amount` field, that negative
+values arise from claims where the driver's liability is not engaged, so there is legal
+recourse. The insurer spends on handling the claim, then recovers from the at-fault
+party's insurer and can end up net positive on that accident.
 
-- *Direct compensation recoveries.* Ruled out. 570 of the 597 negatives sit at
-  `DirectComp = False` with `CompRate = 0`, which is the ordinary-claim category.
-  `CompRate = 100` contains 79 rows and **zero** negatives. The `DirectComp = True`
-  group does show a higher negative rate, 21% against 13%, but on 126 rows that is not
-  something to build an argument on.
-- *Reserve movements on unsettled claims.* Ruled out, and refuted rather than merely
-  unsupported. Only 41 rows carry `SettlYear = 0`, and **none of them are negative**.
-  Every one of the 597 negatives sits among the settled rows.
+**This is an interpretation carried across, and we say so.** The note appears under the
+PG17 field, not under our PG16 `ClaimCharge`, whose entry does not explain the sign.
+What the PG16 documentation *does* record is the French IDA convention: the insurer may
+refund its own insured directly (`DirectComp = TRUE`) and afterwards sue the third-party
+insurer to recover. That is the same mechanism, in the same market, in the same data
+family. Adopting the PG17 explanation for PG16 is reasonable and should be presented as
+a reading rather than a documented fact.
 
-So the rule stands but the mechanism is unexplained. Say exactly that. **"We ruled out
-recoveries and reserve movements, and the public file does not carry the transaction
-detail needed to identify the cause"** is a much stronger answer than calling them
-anomalies, and it converts directly into an answer to *what would you want before using
-this in practice*: claim transaction history, with payments separated from reserve
-movements.
+Two earlier guesses failed and are worth keeping on the record, because "we tested two
+explanations and neither held, then found the documentation" is a stronger story than
+arriving at the answer directly:
+
+- *Direct-compensation recoveries identified through `DirectComp`.* 570 of the 597
+  negatives sit at `DirectComp = False`, which looked like a refutation. It is not.
+  `DirectComp = TRUE` marks direct refund with later recovery, and the negative rate
+  there is 21% against 13% overall, pointing the right way on 126 rows. Recourse can
+  also proceed outside the IDA route. The cross-tab was never decisive either way.
+- *Reserve movements on unsettled claims, using `SettlYear = 0` as the marker.*
+  Abandoned. The documentation does not explain what `SettlYear = 0` means, so the
+  settled/unsettled split it assumed is unfounded.
+
+**Dropping them is now correct by definition, not by convenience.** These are not
+losses our insured caused, and our question is what our insured's accidents cost. The
+cleaned count of 3,969 is at-fault accidents, which is also the right basis for the ADAS
+scenario, since that scenario is about our vehicles causing fewer crashes.
 
 Record and report: rows in, rows out, how many zero, how many negative.
 
@@ -406,7 +420,7 @@ Fit both, report the dispersion statistic, and keep Poisson in the appendix. If 
 data turn out not to be overdispersed, we use Poisson and say so.
 
 Exposure enters as an offset, since rows are observed for varying fractions of a year.
-With four years pooled, the offset is what converts everything back to an annual basis,
+With three years pooled, the offset is what converts everything back to an annual basis,
 so the fitted $\lambda$ is an annual claim rate per vehicle-year regardless of how many
 calendar years went in.
 
@@ -863,9 +877,9 @@ hurt if a question landed on it.
 5. **Anonymised categorical levels.** Risk characteristics in this dataset have no
    published meaning, so we cannot segment or interpret by risk class.
 
-6. **Four years pooled, no inflation adjustment.** An earlier version of this document
-   assumed a single year. The training data covers four, with a fifth held out as test
-   data that we do not use. We pool all four and let the exposure offset put frequency
+6. **Three years pooled, no inflation adjustment.** An earlier version of this document
+   assumed a single year. The training data covers 2011 to 2013, with 2014 held out as
+   test data that we do not use. We pool all three and let the exposure offset put frequency
    on an annual basis, but we apply no trend or repair cost index to severity. Repair
    costs have been rising faster than general inflation, so our fitted severity
    understates current levels, and the understatement grows with the age of the
@@ -877,28 +891,24 @@ hurt if a question landed on it.
    higher deductible changes reporting behaviour and lapse rates, which would feed back
    into both frequency and portfolio composition.
 
-8. **13% of claims are dropped and we cannot say why they are negative.** Claim
-   handling expense is absent from the data outright. Separately, the validation found
-   **597 negative and 2 zero `ClaimCharge` values out of 4,568, or 13.1%**, all of
-   which leave the severity fit because lognormal and gamma need positive support.
+8. **13% of claims are excluded as out of scope.** Claim handling expense is absent
+   from the data outright. Separately, **597 negative and 2 zero `ClaimCharge` values
+   out of 4,568, or 13.1%**, are excluded. Per the CASdatasets documentation these are
+   claims where our insured's liability was not engaged, so the insurer recovered
+   through legal recourse and came out net positive. They are not losses our insured
+   caused, so excluding them is a scope decision rather than a data-cleaning
+   convenience.
 
-   We tested two explanations and both failed. Direct-compensation recoveries: ruled
-   out, since 570 of the 597 sit in the ordinary-claim category and the highest
-   compensation-rate group has no negatives at all. Reserve movements on unsettled
-   claims: refuted, since only 41 rows are unsettled and none of those are negative.
-   The public file does not carry the transaction detail that would settle it.
+   Two caveats to state. The explanation appears under the 2017 Pricing Game's
+   `claim_amount` field; our PG16 `ClaimCharge` entry does not explain the sign, though
+   PG16 does document the IDA convention that produces the same effect. So this is a
+   reading carried across, and we present it as one. And the cleaned count of 3,969 is
+   **at-fault accidents**, so $\lambda$ is an at-fault frequency. That is the correct
+   basis for a scenario about our vehicles causing fewer crashes, but the number is not
+   comparable to a headline claim frequency that includes not-at-fault claims.
 
-   What we can say about direction. Dropping the 599 removes accidents that closed at
-   or below zero for the insurer, so the surviving severity is conditional on the
-   insurer having net paid and **mean severity is overstated**, while the claim count
-   falls about 13% and **$\lambda$ is understated**. If the negatives are recoveries of
-   any kind, our amounts are net rather than gross and severity is understated on that
-   axis too, which runs opposite to the truncation bias in limitation 1.
-
-   This moves the **levels** of $E[S]$ and the tail measures more than it moves the
-   **ranking** of the two designs, since both designs are fed the same severity
-   distribution. Our claim is a ranking, so it survives this better than the absolute
-   figures do. Say that rather than pretending the effect is small.
+   Together with limitation 1 these are both properties of the dataset rather than of
+   our method, which is why they share a slide.
 
 ---
 
@@ -917,9 +927,8 @@ section.
 - Why did you hold expected cost equal between the two designs?
 - What does TVaR at 99% mean in plain language?
 - What is missing from your data that you would want before using this in practice?
-  (Answer: ground-up losses; an accident date; and claim transaction history with
-  payments separated from reserve movements, which is what would explain the 13% of
-  negative amounts we had to drop.)
+  (Answer: ground-up losses; an accident date; and gross repair cost separated from
+  recoveries, so the not-at-fault claims could be analysed rather than excluded.)
 
 The second, third and sixth are the ones most likely to catch someone out, because they
 are choices we made rather than facts we looked up.
