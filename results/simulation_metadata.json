@@ -1,0 +1,210 @@
+{
+  "spec": {
+    "path": "spec.qmd",
+    "sha256": "34ee82f27903e45100a63f51697abc653d2cea0942d548367b55dde6f58078ba",
+    "deductibles": [
+      1000.0,
+      250.0
+    ],
+    "shares": [
+      1.0,
+      0.8
+    ],
+    "vehicles": 1000,
+    "years": 500000,
+    "adas_frequency": 0.6,
+    "adas_severity": 1.15
+  },
+  "settings": {
+    "years": 500000,
+    "vehicles": 1000,
+    "seed": 20260907,
+    "batch_years": 10000,
+    "frequency_grid": [
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      1.0
+    ],
+    "severity_grid": [
+      1.0,
+      1.05,
+      1.1,
+      1.15,
+      1.2,
+      1.25,
+      1.3
+    ],
+    "calibration_relative_tolerance": 1e-08
+  },
+  "data": {
+    "policy_rows": 87228,
+    "claim_rows": 3969,
+    "positive_counts": 3969,
+    "zero_count_periods": 83501,
+    "zero_exposure_periods": 0,
+    "total_exposure": 38538.25,
+    "empirical_annual_rate": 0.10298858925872348,
+    "coverage_years": [
+      2011,
+      2012,
+      2013
+    ],
+    "exposure_mismatch_rows": 82435,
+    "charge_mean": 1689.8680331469563,
+    "charge_max": 8565.170959415469,
+    "duplicate_record_excess": 3,
+    "sha256": {
+      "data/processed/clean_train_policy.parquet": "d9d2f888a4566fbf50be3401a4047edc625e9348292cbc7c8901ec4d71020e69",
+      "data/processed/clean_train_claim.parquet": "2537629b82e77ecbd5afdd95fb6ffc5cd5b9dbf4a6f04a5e3b2bce13cf5d5197"
+    }
+  },
+  "frequency": {
+    "family": "Negative binomial",
+    "rate": 0.10323571659710487,
+    "theta": 0.9250097553438613
+  },
+  "severity": {
+    "family": "Gamma",
+    "shape": 1.2357851171561804,
+    "scale": 1367.4448815468202
+  },
+  "frequency_candidates": [
+    {
+      "family": "Poisson",
+      "annual_rate": 0.10298858925872348,
+      "theta": null,
+      "nb2_alpha": null,
+      "log_likelihood": -15608.00564807687,
+      "aic": 31218.01129615374,
+      "bic": 31227.387576813013,
+      "pearson_dispersion": 1.1186918385467415,
+      "expected_training_count": 3969.0,
+      "expected_zero_periods": 83391.8234421589,
+      "converged": true,
+      "selected": false
+    },
+    {
+      "family": "Negative binomial",
+      "annual_rate": 0.10323571659710487,
+      "theta": 0.9250097553438613,
+      "nb2_alpha": 1.0810696797767954,
+      "log_likelihood": -15551.42411548663,
+      "aic": 31106.84823097326,
+      "bic": 31125.600792291807,
+      "pearson_dispersion": 1.0666556857705665,
+      "expected_training_count": 3978.5238551483767,
+      "expected_zero_periods": 83511.99562128211,
+      "converged": true,
+      "selected": true
+    }
+  ],
+  "severity_candidates": [
+    {
+      "family": "Lognormal",
+      "shape": 1.0980239582098519,
+      "scale": 1070.7239748841043,
+      "location": 0.0,
+      "log_likelihood": -33691.019255257546,
+      "aic": 67386.03851051509,
+      "bic": 67398.61104942067,
+      "ks_statistic": 0.0724208435358461,
+      "anderson_darling_statistic": 39.78682052246086,
+      "fitted_mean": 1956.5120823040402,
+      "fitted_p95": 6517.062397361805,
+      "fitted_p99": 13773.145699945648,
+      "selected": false
+    },
+    {
+      "family": "Gamma",
+      "shape": 1.2357851171561804,
+      "scale": 1367.4448815468202,
+      "location": 0.0,
+      "log_likelihood": -33415.97341873132,
+      "aic": 66835.94683746264,
+      "bic": 66848.51937636822,
+      "ks_statistic": 0.01953439193210544,
+      "anderson_darling_statistic": 1.7117325254780553,
+      "fitted_mean": 1689.8680331469568,
+      "fitted_p95": 4701.499041052795,
+      "fitted_p99": 7008.616521085371,
+      "selected": true
+    }
+  ],
+  "calibration": {
+    "limit_source": "Highest finite upper edge among observed SumInsured bands",
+    "sum_insured_labels": [
+      "137-380 Keur",
+      "38-76 Keur",
+      "7.6-38 Keur",
+      "76-137 Keur",
+      "<=7.6 Keur",
+      "Unknown"
+    ],
+    "deductible_labels": [
+      "0 euro",
+      "1-200 euros",
+      "201-300 euros",
+      "301-400 euros",
+      "401-600 euros",
+      ">600 euros"
+    ],
+    "sum_insured_unknown_rows": 87093,
+    "initial_terms": [
+      {
+        "name": "A",
+        "deductible": 1000.0,
+        "share": 1.0,
+        "limit": 380000.0
+      },
+      {
+        "name": "B",
+        "deductible": 250.0,
+        "share": 0.8,
+        "limit": 380000.0
+      }
+    ],
+    "final_terms": [
+      {
+        "name": "A",
+        "deductible": 1000.0,
+        "share": 1.0,
+        "limit": 380000.0
+      },
+      {
+        "name": "B",
+        "deductible": 250.0,
+        "share": 0.6183120187953539,
+        "limit": 380000.0
+      }
+    ],
+    "adjusted_term": "Design B insurer share only",
+    "baseline_payment_a": 897.3201060479165,
+    "initial_payment_b": 1160.9932574768952,
+    "baseline_payment_b": 897.3201060479165,
+    "absolute_gap_per_claim": 0.0,
+    "relative_gap": 0.0,
+    "relative_tolerance": 1e-08
+  },
+  "baseline_fleet_mean_count": 103.23571659710487,
+  "baseline_fleet_count_variance": 114.75733906621701,
+  "ground_up_proxy": true,
+  "monte_carlo_uncertainty_only": true,
+  "versions": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.5",
+    "pyarrow": "25.0.1",
+    "matplotlib": "3.11.1"
+  },
+  "graphs": [
+    "severity_qq",
+    "frequency_fit",
+    "insurer_comparison",
+    "aggregate_survival",
+    "sensitivity_contour"
+  ],
+  "elapsed_seconds": 83.6112734999042
+}

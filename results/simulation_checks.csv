@@ -1,0 +1,223 @@
+check,frequency_multiplier,status,standardized_error,max_relative_error,severity_multiplier,scenario,limit_mode,design
+Annual count mean,0.5,PASS,0.4377049877572688,,,,,
+"Payments, limits, and retention balance",0.5,PASS,,1.37271810563506e-15,,,,
+Proxy ground-up mean,0.5,PASS,0.833013430128306,,1.0,,,
+Insurer mean vs model,0.5,PASS,0.8726890312282353,,1.0,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8427426660377046,,1.0,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8726890312282353,,1.0,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8427426660377046,,1.0,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301283061,,1.05,,,
+Insurer mean vs model,0.5,PASS,0.8655140493182691,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8435091035767399,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8655140493182691,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8435091035767399,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301277419,,1.1,,,
+Insurer mean vs model,0.5,PASS,0.8545633375810607,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8438214359644565,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8545633375810607,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8438214359644565,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301288458,,1.15,,,
+Insurer mean vs model,0.5,PASS,0.8461304761145835,,1.15,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8442205782729066,,1.15,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8461304761145835,,1.15,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8442205782729066,,1.15,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301283061,,1.2,,,
+Insurer mean vs model,0.5,PASS,0.8412021578657066,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8444437041116094,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8412021578657066,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8444437041116094,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301278095,,1.25,,,
+Insurer mean vs model,0.5,PASS,0.8400406486780068,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8449178930444106,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8400406486780068,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8449178930444106,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.5,PASS,0.8330134301287834,,1.3,,,
+Insurer mean vs model,0.5,PASS,0.8380339139353815,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,0.5,PASS,0.8451599851133434,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,0.5,PASS,0.8380339139353815,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,0.5,PASS,0.8451599851133434,,1.3,Sensitivity,Unlimited,B
+Annual count mean,0.6,PASS,-0.023133065968729962,,,,,
+"Payments, limits, and retention balance",0.6,PASS,,1.420035048179206e-15,,,,
+Proxy ground-up mean,0.6,PASS,0.25904826131960257,,1.0,,,
+Insurer mean vs model,0.6,PASS,0.4483640007384569,,1.0,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.2836113340227057,,1.0,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.4483640007384569,,1.0,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.2836113340227057,,1.0,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.2590482613205439,,1.05,,,
+Insurer mean vs model,0.6,PASS,0.43446711573724234,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.28338861104127716,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.43446711573724234,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.28338861104127716,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.2590482613193458,,1.1,,,
+Insurer mean vs model,0.6,PASS,0.41674377629847786,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.282812284978343,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.41674377629847786,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.282812284978343,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.25904826131972536,,1.15,,,
+Insurer mean vs model,0.6,PASS,0.4010592897632767,,1.15,ADAS,Limited,A
+Insurer mean vs model,0.6,PASS,0.2824199774615048,,1.15,ADAS,Limited,B
+Insurer mean vs model,0.6,PASS,0.4010592897632767,,1.15,ADAS,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.2824199774615048,,1.15,ADAS,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.25904826131960257,,1.2,,,
+Insurer mean vs model,0.6,PASS,0.38951495712566403,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.2819366702732554,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.38951495712566403,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.2819366702732554,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.25904826131948955,,1.25,,,
+Insurer mean vs model,0.6,PASS,0.38130964336561307,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.2817953209040901,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.38130964336561307,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.2817953209040901,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.6,PASS,0.2590482613193853,,1.3,,,
+Insurer mean vs model,0.6,PASS,0.37285834723347494,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,0.6,PASS,0.2815449802824581,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,0.6,PASS,0.37285834723347494,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,0.6,PASS,0.2815449802824581,,1.3,Sensitivity,Unlimited,B
+Annual count mean,0.7,PASS,-0.0047759959074644455,,,,,
+"Payments, limits, and retention balance",0.7,PASS,,1.526826348697768e-15,,,,
+Proxy ground-up mean,0.7,PASS,0.7348300454442364,,1.0,,,
+Insurer mean vs model,0.7,PASS,1.018176021400922,,1.0,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7996743538998025,,1.0,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,1.018176021400922,,1.0,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7996743538998025,,1.0,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.7348300454441618,,1.05,,,
+Insurer mean vs model,0.7,PASS,1.0041359450455465,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7975022407108145,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,1.0041359450455465,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7975022407108145,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.734830045444568,,1.1,,,
+Insurer mean vs model,0.7,PASS,0.987094756737354,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7950099812195126,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,0.987094756737354,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7950099812195126,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.7348300454440323,,1.15,,,
+Insurer mean vs model,0.7,PASS,0.9740168245500472,,1.15,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7929307978009614,,1.15,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,0.9740168245500472,,1.15,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7929307978009614,,1.15,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.73483004544441,,1.2,,,
+Insurer mean vs model,0.7,PASS,0.9637976125944734,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7910320467250428,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,0.9637976125944734,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7910320467250428,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.7348300454447577,,1.25,,,
+Insurer mean vs model,0.7,PASS,0.9558035718871676,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7894748154550655,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,0.9558035718871676,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7894748154550655,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.7,PASS,0.7348300454450785,,1.3,,,
+Insurer mean vs model,0.7,PASS,0.9474289153215075,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,0.7,PASS,0.7878473164083553,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,0.7,PASS,0.9474289153215075,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,0.7,PASS,0.7878473164083553,,1.3,Sensitivity,Unlimited,B
+Annual count mean,0.8,PASS,0.0031849986055230966,,,,,
+"Payments, limits, and retention balance",0.8,PASS,,1.6943031791436619e-15,,,,
+Proxy ground-up mean,0.8,PASS,1.2165164099090633,,1.0,,,
+Insurer mean vs model,0.8,PASS,1.595346599015402,,1.0,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.3191313225211745,,1.0,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.595346599015402,,1.0,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.3191313225211745,,1.0,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099090169,,1.05,,,
+Insurer mean vs model,0.8,PASS,1.5750361033067966,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.315137086249972,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5750361033067966,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.315137086249972,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099089747,,1.1,,,
+Insurer mean vs model,0.8,PASS,1.5530608878389522,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.3109187895705,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5530608878389522,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.3109187895705,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099089363,,1.15,,,
+Insurer mean vs model,0.8,PASS,1.5370811126759887,,1.15,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.307188033555403,,1.15,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5370811126759887,,1.15,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.307188033555403,,1.15,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099097114,,1.2,,,
+Insurer mean vs model,0.8,PASS,1.5232225444243714,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.303927326530607,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5232225444243714,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.303927326530607,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099088688,,1.25,,,
+Insurer mean vs model,0.8,PASS,1.5125992301852489,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.3011405702546641,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5125992301852489,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.3011405702546641,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.8,PASS,1.2165164099088386,,1.3,,,
+Insurer mean vs model,0.8,PASS,1.5023897675192226,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,0.8,PASS,1.2984465312848295,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,0.8,PASS,1.5023897675192226,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,0.8,PASS,1.2984465312848295,,1.3,Sensitivity,Unlimited,B
+Annual count mean,0.9,PASS,-0.003701921862054911,,,,,
+"Payments, limits, and retention balance",0.9,PASS,,1.811769907650303e-15,,,,
+Proxy ground-up mean,0.9,PASS,1.290955051315809,,1.0,,,
+Insurer mean vs model,0.9,PASS,1.6400656995824485,,1.0,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.3819118137794657,,1.0,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.6400656995824485,,1.0,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.3819118137794657,,1.0,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.2909550513165924,,1.05,,,
+Insurer mean vs model,0.9,PASS,1.6202475394293747,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.3785838619872577,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.6202475394293747,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.3785838619872577,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.2909550513156425,,1.1,,,
+Insurer mean vs model,0.9,PASS,1.5979813655036894,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.375028567765732,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.5979813655036894,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.375028567765732,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.2909550513155705,,1.15,,,
+Insurer mean vs model,0.9,PASS,1.5814788053632556,,1.15,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.3718547009923343,,1.15,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.5814788053632556,,1.15,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.3718547009923343,,1.15,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.290955051316266,,1.2,,,
+Insurer mean vs model,0.9,PASS,1.5664154446934209,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.3691424996514512,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.5664154446934209,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.3691424996514512,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.290955051315443,,1.25,,,
+Insurer mean vs model,0.9,PASS,1.5541688477963236,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.3668066385023308,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.5541688477963236,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.3668066385023308,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,0.9,PASS,1.2909550513160901,,1.3,,,
+Insurer mean vs model,0.9,PASS,1.542597677081465,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,0.9,PASS,1.364654905937509,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,0.9,PASS,1.542597677081465,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,0.9,PASS,1.364654905937509,,1.3,Sensitivity,Unlimited,B
+Annual count mean,1.0,PASS,0.009993760726962956,,,,,
+"Payments, limits, and retention balance",1.0,PASS,,2.0420173765679444e-15,,,,
+Proxy ground-up mean,1.0,PASS,1.2558993314656173,,1.0,,,
+Insurer mean vs model,1.0,PASS,1.587433627343438,,1.0,Baseline,Limited,A
+Insurer mean vs model,1.0,PASS,1.349416134754587,,1.0,Baseline,Limited,B
+Insurer mean vs model,1.0,PASS,1.587433627343438,,1.0,Baseline,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.349416134754587,,1.0,Baseline,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.2558993314659876,,1.05,,,
+Insurer mean vs model,1.0,PASS,1.5688514428448976,,1.05,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.3453227365035099,,1.05,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.5688514428448976,,1.05,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.3453227365035099,,1.05,Sensitivity,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.2558993314655384,,1.1,,,
+Insurer mean vs model,1.0,PASS,1.5484180906855203,,1.1,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.34112056220886,,1.1,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.5484180906855203,,1.1,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.34112056220886,,1.1,Sensitivity,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.255899331465128,,1.15,,,
+Insurer mean vs model,1.0,PASS,1.534020816263391,,1.15,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.3374977872858704,,1.15,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.534020816263391,,1.15,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.3374977872858704,,1.15,Sensitivity,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.2558993314661935,,1.2,,,
+Insurer mean vs model,1.0,PASS,1.520665169598057,,1.2,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.3343783944898093,,1.2,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.520665169598057,,1.2,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.3343783944898093,,1.2,Sensitivity,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.25589933146579,,1.25,,,
+Insurer mean vs model,1.0,PASS,1.5103018018178824,,1.25,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.3317265522708481,,1.25,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.5103018018178824,,1.25,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.3317265522708481,,1.25,Sensitivity,Unlimited,B
+Proxy ground-up mean,1.0,PASS,1.2558993314647522,,1.3,,,
+Insurer mean vs model,1.0,PASS,1.50032617091275,,1.3,Sensitivity,Limited,A
+Insurer mean vs model,1.0,PASS,1.3292883932868274,,1.3,Sensitivity,Limited,B
+Insurer mean vs model,1.0,PASS,1.50032617091275,,1.3,Sensitivity,Unlimited,A
+Insurer mean vs model,1.0,PASS,1.3292883932868274,,1.3,Sensitivity,Unlimited,B

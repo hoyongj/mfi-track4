@@ -2,7 +2,7 @@
 
 Result: 0 failed checks; 4 warnings. Three separate Parquet tables saved.
 
-Run from the project folder: `uv run src/run_pipeline.py`.
+Run from the project folder: `uv run src/run_pipeline.py --stage processing`.
 
 This generated report records input validation, cleaning rules, variable meanings, and output checks. Further analysis of coverage-period linkage and claim counts after filtering is in [claim_table_checks.md](claim_table_checks.md).
 

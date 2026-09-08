@@ -578,7 +578,7 @@ def _write_report(path: Path, result: ProcessingResult, tolerance: float, export
     lines = [
         "# Data processing", "",
         f"Result: {failures} failed checks; {warnings} warnings. {output_status}",
-        "", "Run from the project folder: `uv run src/run_pipeline.py`.", "",
+        "", "Run from the project folder: `uv run src/run_pipeline.py --stage processing`.", "",
         "This generated report records input validation, cleaning rules, variable meanings, and output checks. "
         "Further analysis of coverage-period linkage and claim counts after filtering is in "
         "[claim_table_checks.md](claim_table_checks.md).",
