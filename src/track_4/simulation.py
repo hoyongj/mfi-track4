@@ -57,15 +57,12 @@ class Contract:
     name: str
     deductible: float
     share: float
-    limit: float
 
     def __post_init__(self) -> None:
         if not np.isfinite(self.deductible) or self.deductible < 0:
             raise SimulationError("Deductible must be finite and nonnegative.")
         if not np.isfinite(self.share) or not 0 <= self.share <= 1:
             raise SimulationError("Insurer share must lie in [0, 1].")
-        if np.isnan(self.limit) or self.limit <= 0:
-            raise SimulationError("Payment limit must be positive (infinity is allowed).")
 
 
 @dataclass(frozen=True)
@@ -158,7 +155,7 @@ def load_training_data(root: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
             raise SimulationError(f"Missing {path}; run the data stage first.")
     policy, claim = (pd.read_parquet(paths[name]) for name in ("policy", "claim"))
     key = list(POLICY_KEY_COLUMNS)
-    for frame, required in ((policy, key + ["ClaimNbClean", "Exposure", "SumInsured", "Deduc"]),
+    for frame, required in ((policy, key + ["ClaimNbClean", "Exposure", "Deduc"]),
                             (claim, key + ["ClaimCharge"])):
         missing = set(required) - set(frame.columns)
         if missing or frame.empty:
@@ -279,40 +276,26 @@ def fit_severity(amounts: np.ndarray) -> tuple[SeverityModel, pd.DataFrame, list
 
 
 def insurer_payment(losses: np.ndarray, contract: Contract) -> np.ndarray:
-    return np.minimum(contract.share * np.maximum(losses - contract.deductible, 0), contract.limit)
+    return contract.share * np.maximum(losses - contract.deductible, 0)
 
 
 def contract_moments(model: SeverityModel, contract: Contract, multiplier: float = 1.0) -> dict:
-    d, alpha, limit = contract.deductible, contract.share, contract.limit
+    """First two moments of share * (X - deductible)+ and its zero-payment probability."""
+    d, alpha = contract.deductible, contract.share
     below = float(model.distribution(multiplier).cdf(d))
     if alpha == 0:
-        return {"mean": 0.0, "second_moment": 0.0, "below_deductible": below, "at_limit": 0.0}
-    upper = d + limit / alpha
+        return {"mean": 0.0, "second_moment": 0.0, "below_deductible": below}
     low = [model.tail_moment(k, d, multiplier) for k in range(3)]
-    high = [model.tail_moment(k, upper, multiplier) for k in range(3)] if np.isfinite(upper) else [0., 0., 0.]
     mean = alpha * (low[1] - d * low[0])
-    if np.isfinite(upper):
-        mean -= alpha * (high[1] - upper * high[0])
-    second = alpha**2 * ((low[2] - high[2]) - 2 * d * (low[1] - high[1]) + d**2 * (low[0] - high[0]))
-    if np.isfinite(limit):
-        second += limit**2 * high[0]
+    second = alpha**2 * (low[2] - 2 * d * low[1] + d**2 * low[0])
     return {"mean": float(max(mean, 0)), "second_moment": float(max(second, 0)),
-            "below_deductible": below, "at_limit": high[0]}
+            "below_deductible": below}
 
 
-def calibrate_contracts(policy: pd.DataFrame, amounts: np.ndarray, severity: SeverityModel,
+def calibrate_contracts(policy: pd.DataFrame, severity: SeverityModel,
                         spec: dict, settings: SimulationSettings) -> tuple[list[Contract], dict]:
-    labels = sorted(str(x) for x in policy["SumInsured"].dropna().unique())
-    edges = []
-    for label in labels:
-        if "keur" in label.lower() and not label.strip().startswith(">"):
-            values = re.findall(r"\d+(?:\.\d+)?", label)
-            if values:
-                edges.append(1000 * max(float(x) for x in values))
-    limit = max(edges) if edges else float(np.quantile(amounts, .995))
-    source = "Highest finite upper edge among observed SumInsured bands" if edges else "Fallback: cleaned-charge 99.5th percentile"
-    a = Contract("A", spec["deductibles"][0], spec["shares"][0], limit)
-    initial_b = Contract("B", spec["deductibles"][1], spec["shares"][1], limit)
+    a = Contract("A", spec["deductibles"][0], spec["shares"][0])
+    initial_b = Contract("B", spec["deductibles"][1], spec["shares"][1])
     target = contract_moments(severity, a)["mean"]
 
     def gap(alpha):
@@ -326,9 +309,7 @@ def calibrate_contracts(policy: pd.DataFrame, amounts: np.ndarray, severity: Sev
     if abs(absolute_gap) > settings.calibration_relative_tolerance * target:
         raise SimulationError("Baseline contract calibration exceeded the requested tolerance.")
     return [a, b], {
-        "limit_source": source, "sum_insured_labels": labels,
         "deductible_labels": sorted(str(x) for x in policy["Deduc"].dropna().unique()),
-        "sum_insured_unknown_rows": int(policy["SumInsured"].astype("string").eq("Unknown").sum()),
         "initial_terms": [asdict(a), asdict(initial_b)], "final_terms": [asdict(a), asdict(b)],
         "adjusted_term": "Design B insurer share only", "baseline_payment_a": target,
         "initial_payment_b": contract_moments(severity, initial_b)["mean"],
@@ -384,15 +365,14 @@ def _simulate_frequency_slice(frequency: FrequencyModel, severity: SeverityModel
 
     Replay the same independent count/severity/mark streams at each frequency.
     Thinning baseline claims gives the correct Poisson or NB2 marginals while
-    keeping A/B, capped/unlimited, and all severity shifts on common claims.
+    keeping both designs and all severity shifts on common claims.
     """
     count_rng, severity_rng, mark_rng = [np.random.default_rng(np.random.SeedSequence(settings.seed, spawn_key=(i,)))
                                         for i in range(3)]
-    annual = np.empty((len(settings.severity_grid), 2, 2, settings.years), dtype=np.float64)
+    annual = np.empty((len(settings.severity_grid), len(contracts), settings.years), dtype=np.float64)
     ground = np.empty(settings.years, dtype=np.float64)
     count = np.empty(settings.years, dtype=np.int64)
-    below = np.zeros((len(settings.severity_grid), 2), dtype=np.int64)
-    at_limit = np.zeros_like(below)
+    below = np.zeros((len(settings.severity_grid), len(contracts)), dtype=np.int64)
     max_relative_balance_error = 0.0
     for start in range(0, settings.years, settings.batch_years):
         stop = min(start + settings.batch_years, settings.years)
@@ -410,35 +390,20 @@ def _simulate_frequency_slice(frequency: FrequencyModel, severity: SeverityModel
             aggregate_loss = ground[start:stop] * phi_x
             for k, contract in enumerate(contracts):
                 excess = np.maximum(losses - contract.deductible, 0)
-                unlimited = contract.share * excess
+                payment = insurer_payment(losses, contract)
                 # Independently express retention to check the payment transformation.
                 retention = np.minimum(losses, contract.deductible) + (1 - contract.share) * excess
-                if (unlimited < 0).any() or (unlimited > losses + 1e-9).any():
+                if (payment < 0).any() or (payment > losses + 1e-9).any():
                     raise SimulationError("Insurer payment is outside [0, loss].")
-                unlimited_total = np.bincount(year_index, weights=unlimited, minlength=batch_size)
+                payment_total = np.bincount(year_index, weights=payment, minlength=batch_size)
                 retention_total = np.bincount(year_index, weights=retention, minlength=batch_size)
-                annual[j, 1, k, start:stop] = unlimited_total
-                residual = np.abs(aggregate_loss - unlimited_total - retention_total) / (1 + aggregate_loss)
+                annual[j, k, start:stop] = payment_total
+                residual = np.abs(aggregate_loss - payment_total - retention_total) / (1 + aggregate_loss)
                 max_relative_balance_error = max(max_relative_balance_error, float(residual.max(initial=0)))
-                hit = unlimited >= contract.limit
                 below[j, k] += np.count_nonzero(losses <= contract.deductible)
-                at_limit[j, k] += np.count_nonzero(hit)
-                if hit.any():
-                    limited = insurer_payment(losses, contract)
-                    limited_retention = retention + np.maximum(unlimited - contract.limit, 0)
-                    payment_total = np.bincount(year_index, weights=limited, minlength=batch_size)
-                    retention_total = np.bincount(year_index, weights=limited_retention, minlength=batch_size)
-                    if (limited > contract.limit).any():
-                        raise SimulationError("Per-claim payment exceeds its limit.")
-                    residual = np.abs(aggregate_loss - payment_total - retention_total) / (1 + aggregate_loss)
-                    max_relative_balance_error = max(max_relative_balance_error, float(residual.max(initial=0)))
-                    annual[j, 0, k, start:stop] = payment_total
-                else:
-                    # The cap still applies; with no hit its result is exactly identical.
-                    annual[j, 0, k, start:stop] = unlimited_total
     if max_relative_balance_error > 1e-10:
         raise SimulationError(f"Loss conservation failed: relative error {max_relative_balance_error:g}")
-    return annual, ground, count, below, at_limit, max_relative_balance_error
+    return annual, ground, count, below, max_relative_balance_error
 
 
 def simulate_scenarios(frequency: FrequencyModel, severity: SeverityModel, contracts: list[Contract],
@@ -448,8 +413,8 @@ def simulate_scenarios(frequency: FrequencyModel, severity: SeverityModel, contr
     distributions = {}
     for phi_n in settings.frequency_grid:
         tick = perf_counter()
-        progress(f"Simulating frequency x{phi_n:.2f}: {settings.years:,} years, all severity shifts and both limit settings...")
-        annual, ground, counts, below, at_limit, balance = _simulate_frequency_slice(
+        progress(f"Simulating frequency x{phi_n:.2f}: {settings.years:,} years, all severity shifts and both designs...")
+        annual, ground, counts, below, balance = _simulate_frequency_slice(
             frequency, severity, contracts, phi_n, settings
         )
         mean_n, var_n = frequency.fleet_moments(settings.vehicles, phi_n)
@@ -457,7 +422,7 @@ def simulate_scenarios(frequency: FrequencyModel, severity: SeverityModel, contr
         count_z = (counts.mean() - mean_n) / count_se
         checks.append({"check": "Annual count mean", "frequency_multiplier": phi_n,
                        "status": "PASS" if abs(count_z) <= 6 else "WARN", "standardized_error": count_z})
-        checks.append({"check": "Payments, limits, and retention balance", "frequency_multiplier": phi_n,
+        checks.append({"check": "Payments and retention balance", "frequency_multiplier": phi_n,
                        "status": "PASS", "max_relative_error": balance})
         total_claims = int(counts.sum())
         for j, phi_x in enumerate(settings.severity_grid):
@@ -471,43 +436,38 @@ def simulate_scenarios(frequency: FrequencyModel, severity: SeverityModel, contr
             checks.append({"check": "Proxy ground-up mean", "frequency_multiplier": phi_n,
                            "severity_multiplier": phi_x, "status": "PASS" if abs(ground_z) <= 6 else "WARN",
                            "standardized_error": ground_z})
-            for mode_index, mode in enumerate(("Limited", "Unlimited")):
-                key = {"scenario": scenario, "limit_mode": mode, "frequency_multiplier": phi_n,
-                       "severity_multiplier": phi_x}
-                metrics, influences = [], []
-                for k, original in enumerate(contracts):
-                    contract = original if mode == "Limited" else replace(original, limit=float("inf"))
-                    values = annual[j, mode_index, k]
-                    risk, influence = risk_metrics(values)
-                    moments = contract_moments(severity, contract, phi_x)
-                    expected_cost = mean_n * moments["mean"]
-                    expected_variance = mean_n * moments["second_moment"] + (var_n - mean_n) * moments["mean"]**2
-                    z = (risk["mean"] - expected_cost) / np.sqrt(expected_variance / settings.years)
-                    insurer_rows.append({**key, "design": contract.name, **risk,
-                                         "model_mean": expected_cost, "model_sd": np.sqrt(expected_variance),
-                                         "mean_check_z": z, "simulated_claims": total_claims})
-                    checks.append({**key, "design": contract.name, "check": "Insurer mean vs model",
-                                   "status": "PASS" if abs(z) <= 6 else "WARN", "standardized_error": z})
-                    retained = annual_losses - values
-                    retention_rows.append({**key, "design": contract.name,
-                                           "expected_retention_per_claim": loss_mean - moments["mean"],
-                                           "expected_retention_annual_per_vehicle": (mean_n / settings.vehicles) * (loss_mean - moments["mean"]),
-                                           "retention_share_of_losses": (loss_mean - moments["mean"]) / loss_mean,
-                                           "mc_retention_per_claim": float(retained.sum() / total_claims),
-                                           "mc_retention_annual_per_vehicle": float(retained.mean() / settings.vehicles),
-                                           "mc_retention_share": float(retained.sum() / annual_losses.sum()),
-                                           "expected_below_deductible": moments["below_deductible"],
-                                           "mc_below_deductible": float(below[j, k] / total_claims),
-                                           "expected_at_limit": moments["at_limit"],
-                                           "mc_at_limit": float(at_limit[j, k] / total_claims) if mode == "Limited" else 0.0})
-                    if scenario in ("Baseline", "ADAS"):
-                        distributions[(scenario, mode, contract.name)] = values.copy()
-                    metrics.append(risk)
-                    influences.append(influence)
-                ratio = paired_tvar_ratio(*metrics, *influences)
-                delta = annual[j, mode_index, 0] - annual[j, mode_index, 1]
-                ratio_rows.append({**key, **ratio, "mean_a_minus_b": float(delta.mean()),
-                                   "mean_difference_mcse": float(delta.std(ddof=1) / np.sqrt(settings.years))})
+            key = {"scenario": scenario, "frequency_multiplier": phi_n, "severity_multiplier": phi_x}
+            metrics, influences = [], []
+            for k, contract in enumerate(contracts):
+                values = annual[j, k]
+                risk, influence = risk_metrics(values)
+                moments = contract_moments(severity, contract, phi_x)
+                expected_cost = mean_n * moments["mean"]
+                expected_variance = mean_n * moments["second_moment"] + (var_n - mean_n) * moments["mean"]**2
+                z = (risk["mean"] - expected_cost) / np.sqrt(expected_variance / settings.years)
+                insurer_rows.append({**key, "design": contract.name, **risk,
+                                     "model_mean": expected_cost, "model_sd": np.sqrt(expected_variance),
+                                     "mean_check_z": z, "simulated_claims": total_claims})
+                checks.append({**key, "design": contract.name, "check": "Insurer mean vs model",
+                               "status": "PASS" if abs(z) <= 6 else "WARN", "standardized_error": z})
+                retained = annual_losses - values
+                retention_rows.append({**key, "design": contract.name,
+                                       "expected_retention_per_claim": loss_mean - moments["mean"],
+                                       "expected_retention_annual_per_vehicle": (mean_n / settings.vehicles) * (loss_mean - moments["mean"]),
+                                       "retention_share_of_losses": (loss_mean - moments["mean"]) / loss_mean,
+                                       "mc_retention_per_claim": float(retained.sum() / total_claims),
+                                       "mc_retention_annual_per_vehicle": float(retained.mean() / settings.vehicles),
+                                       "mc_retention_share": float(retained.sum() / annual_losses.sum()),
+                                       "expected_below_deductible": moments["below_deductible"],
+                                       "mc_below_deductible": float(below[j, k] / total_claims)})
+                if scenario in ("Baseline", "ADAS"):
+                    distributions[(scenario, contract.name)] = values.copy()
+                metrics.append(risk)
+                influences.append(influence)
+            ratio = paired_tvar_ratio(*metrics, *influences)
+            delta = annual[j, 0] - annual[j, 1]
+            ratio_rows.append({**key, **ratio, "mean_a_minus_b": float(delta.mean()),
+                               "mean_difference_mcse": float(delta.std(ddof=1) / np.sqrt(settings.years))})
         progress(f"Finished frequency x{phi_n:.2f} in {perf_counter() - tick:.1f}s; {total_claims:,} shared claims.")
     return (pd.DataFrame(insurer_rows), pd.DataFrame(retention_rows), pd.DataFrame(ratio_rows),
             pd.DataFrame(checks), distributions)
@@ -519,8 +479,6 @@ def _number(value) -> str:
     if isinstance(value, (bool, np.bool_)):
         return "Yes" if value else "No"
     if isinstance(value, (float, np.floating)):
-        if np.isinf(value):
-            return "Unlimited"
         if value != 0 and abs(value) < .0001:
             return f"{value:.3e}"
         return f"{value:,.6f}".rstrip("0").rstrip(".")
@@ -597,19 +555,17 @@ def _save_plots(graphs: Path, policy: pd.DataFrame, amounts: np.ndarray, frequen
 
     save(_plot_insurer_comparison(result), "insurer_comparison")
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8), sharey=True, layout="constrained")
+    fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
     exceedance = np.geomspace(1e-5, .999, 500)
-    for ax, mode in zip(axes, ("Limited", "Unlimited")):
-        for scenario, style in (("Baseline", "-"), ("ADAS", "--")):
-            for k, design in enumerate(("A", "B")):
-                values = distributions[(scenario, mode, design)]
-                ax.plot(np.quantile(values, 1 - exceedance) / 1000, exceedance, style,
-                        color=("#315a88", "#bd6438")[k], label=f"{scenario}, {design}")
-        ax.set(title=mode + " payments", xlabel="Annual insurer cost (€ thousands)",
-               ylabel="Probability annual cost exceeds x", yscale="log", ylim=(1e-5, 1))
-        ax.axhline(.01, color="#777777", linewidth=.8, linestyle=":")
-    axes[0].legend(fontsize=9)
-    fig.suptitle("Annual cost distributions using the same simulated proxy losses for A and B")
+    for scenario, style in (("Baseline", "-"), ("ADAS", "--")):
+        for k, design in enumerate(("A", "B")):
+            values = distributions[(scenario, design)]
+            ax.plot(np.quantile(values, 1 - exceedance) / 1000, exceedance, style,
+                    color=("#315a88", "#bd6438")[k], label=f"{scenario}, {design}")
+    ax.set(title="Annual costs from shared simulated proxy losses", xlabel="Annual insurer cost (€ thousands)",
+           ylabel="Probability annual cost exceeds x", yscale="log", ylim=(1e-5, 1))
+    ax.axhline(.01, color="#777777", linewidth=.8, linestyle=":")
+    ax.legend(fontsize=9)
     save(fig, "aggregate_survival")
 
     save(_plot_sensitivity_contour(result), "sensitivity_contour")
@@ -620,55 +576,53 @@ def _plot_insurer_comparison(result: SimulationResult):
     from matplotlib import pyplot as plt
 
     main = result.insurer.loc[result.insurer["scenario"].isin(["Baseline", "ADAS"])]
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5.2), sharey=True, layout="constrained")
-    for ax, mode in zip(axes, ("Limited", "Unlimited")):
-        rows = main.loc[main["limit_mode"].eq(mode)].set_index(["scenario", "design"])
-        for k, design in enumerate(("A", "B")):
-            positions = np.array([0, 1]) + (k - .5) * .28
-            selected = rows.loc[[("Baseline", design), ("ADAS", design)]]
-            ax.bar(positions, selected["tvar99"] / 1000, width=.27, color=("#315a88", "#bd6438")[k],
-                   label=f"Design {design}: TVaR99", yerr=1.96 * selected["tvar99_mcse"] / 1000, capsize=4)
-            ax.scatter(positions, selected["mean"] / 1000, color="white", edgecolor="black", s=45, zorder=3,
-                       label="Mean" if k == 0 else None)
-        ax.set(title=mode + " payments", xticks=[0, 1], xticklabels=["Baseline", "ADAS"],
-               ylabel="Annual insurer cost (€ thousands)")
-    handles, labels = axes[0].get_legend_handles_labels()
+    fig, ax = plt.subplots(figsize=(8, 5.2), layout="constrained")
+    rows = main.set_index(["scenario", "design"])
+    for k, design in enumerate(("A", "B")):
+        positions = np.array([0, 1]) + (k - .5) * .28
+        selected = rows.loc[[("Baseline", design), ("ADAS", design)]]
+        ax.bar(positions, selected["tvar99"] / 1000, width=.27, color=("#315a88", "#bd6438")[k],
+               label=f"Design {design}: TVaR99", yerr=1.96 * selected["tvar99_mcse"] / 1000, capsize=4)
+        ax.scatter(positions, selected["mean"] / 1000, color="white", edgecolor="black", s=45, zorder=3,
+                   label="Mean" if k == 0 else None)
+    ax.set(xticks=[0, 1], xticklabels=["Baseline", "ADAS"], ylabel="Annual insurer cost (€ thousands)",
+           title=f"{result.metadata['settings']['vehicles']:,} vehicles: costs under the proxy-loss model\n"
+                 "TVaR99 with 95% Monte Carlo error bars")
+    handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="outside lower center", ncols=3, frameon=False, fontsize=10)
-    fig.suptitle(f"{result.metadata['settings']['vehicles']:,} vehicles: proxy-loss costs and TVaR99 with 95% Monte Carlo error bars")
     return fig
 
 
 def _plot_sensitivity_contour(result: SimulationResult):
     from matplotlib import pyplot as plt
 
-    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8), layout="constrained")
+    fig, ax = plt.subplots(figsize=(8, 5.2), layout="constrained")
     ratios = result.ratios
     low, high = ratios["tvar99_ratio_a_b"].min(), ratios["tvar99_ratio_a_b"].max()
     if high - low < 1e-8:
         low, high = low - .001, high + .001
     levels = np.linspace(low, high, 13)
-    for ax, mode in zip(axes, ("Limited", "Unlimited")):
-        grid = ratios.loc[ratios["limit_mode"].eq(mode)].pivot(index="frequency_multiplier", columns="severity_multiplier", values="tvar99_ratio_a_b")
-        contour = ax.contourf(grid.columns, grid.index, grid.to_numpy(), levels=levels, cmap="viridis")
-        if grid.to_numpy().min() < 1 < grid.to_numpy().max():
-            ax.contour(grid.columns, grid.index, grid.to_numpy(), levels=[1], colors="white", linewidths=1.5)
-        ax.scatter([1, result.metadata["spec"]["adas_severity"]], [1, result.metadata["spec"]["adas_frequency"]],
-                   marker="X", color="white", edgecolor="black", s=80, zorder=3, clip_on=False)
-        ax.annotate("Baseline", (1, 1), xytext=(7, -15), textcoords="offset points")
-        ax.annotate("ADAS", (result.metadata["spec"]["adas_severity"], result.metadata["spec"]["adas_frequency"]),
-                    xytext=(7, 5), textcoords="offset points")
-        ax.set(title=mode + " payments", xlabel="Severity multiplier", ylabel="Frequency multiplier")
-    fig.colorbar(contour, ax=axes, label="TVaR99(A) / TVaR99(B); values above 1 favor B", shrink=.85)
-    fig.suptitle("Sensitivity under the proxy-loss model; calibrated deductibles and shares held fixed")
+    grid = ratios.pivot(index="frequency_multiplier", columns="severity_multiplier", values="tvar99_ratio_a_b")
+    contour = ax.contourf(grid.columns, grid.index, grid.to_numpy(), levels=levels, cmap="viridis")
+    if grid.to_numpy().min() < 1 < grid.to_numpy().max():
+        ax.contour(grid.columns, grid.index, grid.to_numpy(), levels=[1], colors="white", linewidths=1.5)
+    ax.scatter([1, result.metadata["spec"]["adas_severity"]], [1, result.metadata["spec"]["adas_frequency"]],
+               marker="X", color="white", edgecolor="black", s=80, zorder=3, clip_on=False)
+    ax.annotate("Baseline", (1, 1), xytext=(7, -15), textcoords="offset points")
+    ax.annotate("ADAS", (result.metadata["spec"]["adas_severity"], result.metadata["spec"]["adas_frequency"]),
+                xytext=(7, 5), textcoords="offset points")
+    ax.set(xlabel="Severity multiplier", ylabel="Frequency multiplier",
+           title="Sensitivity under the proxy-loss model\nCalibrated deductibles and shares held fixed")
+    fig.colorbar(contour, ax=ax, label="TVaR99(A) / TVaR99(B); values above 1 favor B", shrink=.85)
     return fig
 
 
 def _write_simulation_report(path: Path, result: SimulationResult) -> None:
     meta = result.metadata
     data, config, cal = meta["data"], meta["settings"], meta["calibration"]
-    main_cost = result.insurer.loc[result.insurer["scenario"].isin(["Baseline", "ADAS"])].sort_values(["limit_mode", "scenario", "design"])
-    main_retention = result.retention.loc[result.retention["scenario"].isin(["Baseline", "ADAS"])].sort_values(["limit_mode", "scenario", "design"])
-    main_ratios = result.ratios.loc[result.ratios["scenario"].isin(["Baseline", "ADAS"])].sort_values(["limit_mode", "scenario"])
+    main_cost = result.insurer.loc[result.insurer["scenario"].isin(["Baseline", "ADAS"])].sort_values(["scenario", "design"])
+    main_retention = result.retention.loc[result.retention["scenario"].isin(["Baseline", "ADAS"])].sort_values(["scenario", "design"])
+    main_ratios = result.ratios.loc[result.ratios["scenario"].isin(["Baseline", "ADAS"])].sort_values("scenario")
     warnings = int(result.checks["status"].eq("WARN").sum())
     lines = [
         "# Contract simulation", "",
@@ -683,20 +637,14 @@ def _write_simulation_report(path: Path, result: SimulationResult) -> None:
     ]
     for _, row in main_ratios.loc[main_ratios["scenario"].eq("ADAS")].iterrows():
         verdict = "B has lower TVaR99" if row["ratio_ci95_low"] > 1 else "A has lower TVaR99" if row["ratio_ci95_high"] < 1 else "the A/B tail ranking is unresolved at this Monte Carlo precision"
-        lines.append(f"- {row['limit_mode']}, ADAS: {verdict}; A/B TVaR99 ratio {_number(row['tvar99_ratio_a_b'])}, "
+        lines.append(f"ADAS: {verdict}; A/B TVaR99 ratio {_number(row['tvar99_ratio_a_b'])}, "
                      f"MC SE {_number(row['ratio_mcse'])}, 95% MC interval "
                      f"[{_number(row['ratio_ci95_low'])}, {_number(row['ratio_ci95_high'])}].")
     if result.ratios["ratio_ci95_low"].gt(1).all():
-        lines += ["", f"B has lower TVaR99 at every tested grid point in both limit modes; ratios range from "
+        lines += ["", f"B has lower TVaR99 at every tested grid point; ratios range from "
                   f"{result.ratios['tvar99_ratio_a_b'].min():.4f} to {result.ratios['tvar99_ratio_a_b'].max():.4f}. "
                   "This is an insurer-tail ranking under the proxy-loss model, not an overall welfare ranking."]
-    if result.retention["mc_at_limit"].eq(0).all():
-        lines += ["", "No simulated claim reaches either payment limit anywhere in the grid, so capped and unlimited "
-                  "results coincide. The selected limits are effectively nonbinding under this fitted severity model; "
-                  "the unlimited repeat therefore provides no evidence about contracts with materially lower limits."]
-    adas_retention = main_retention.loc[
-        main_retention["scenario"].eq("ADAS") & main_retention["limit_mode"].eq("Limited")
-    ].set_index("design")
+    adas_retention = main_retention.loc[main_retention["scenario"].eq("ADAS")].set_index("design")
     lines += ["", "Policyholder tradeoff in the ADAS scenario: expected annual retention per vehicle is "
               f"€{adas_retention.loc['A', 'expected_retention_annual_per_vehicle']:.2f} for A and "
               f"€{adas_retention.loc['B', 'expected_retention_annual_per_vehicle']:.2f} for B. "
@@ -730,30 +678,28 @@ def _write_simulation_report(path: Path, result: SimulationResult) -> None:
     lines += ["", "![Frequency model diagnostics](graphs/frequency_fit.png)", "",
               "![Severity QQ diagnostics](graphs/severity_qq.png)", "",
               "## Contracts and calibration", "",
-              "Payment is `min(share * max(proxy_loss - deductible, 0), limit)`; the limit caps insurer payment. "
+              "Payment is `share * max(proxy_loss - deductible, 0)`. "
               "Calibrate B's share only against A using analytic severity partial moments under the unshifted selected model. "
-              "Deductibles and shares are then fixed for every grid point and for the unlimited repeat.", ""]
+              "Deductibles and shares are then fixed for every grid point.", ""]
     terms = pd.DataFrame([{"stage": stage, **term} for stage, group in (("Initial", cal["initial_terms"]), ("Calibrated", cal["final_terms"])) for term in group])
-    lines += _markdown_table(terms, {"stage": "Stage", "name": "Design", "deductible": "Deductible (€)", "share": "Insurer share", "limit": "Payment limit (€)"})
+    lines += _markdown_table(terms, {"stage": "Stage", "name": "Design", "deductible": "Deductible (€)", "share": "Insurer share"})
     annual_count = meta["baseline_fleet_mean_count"]
     lines += ["", f"Calibrated expected payment per claim: A = €{_number(cal['baseline_payment_a'])}; B = €{_number(cal['baseline_payment_b'])}. "
               f"Expected baseline annual fleet cost = €{_number(annual_count * cal['baseline_payment_a'])}. "
               f"A/B calibration gap (B minus A): €{_number(cal['absolute_gap_per_claim'])} per claim, "
               f"relative gap {_number(cal['relative_gap'])}; required relative tolerance {cal['relative_tolerance']:.1e}.", "",
-              f"Limit source: {cal['limit_source']}. Observed SumInsured labels: {', '.join(cal['sum_insured_labels'])}. "
-              f"Unknown occurs in {cal['sum_insured_unknown_rows']:,} policies, so the band edge is a scenario assumption, "
-              "not an observed individual policy limit. Observed Deduc labels: " + ", ".join(cal["deductible_labels"]) + ". "
+              "Observed Deduc labels: " + ", ".join(cal["deductible_labels"]) + ". "
               "The starting €250 deductible falls in 201–300 euros; €1,000 is compatible with the open >600 band, "
               "which does not establish an exact sold deductible.", "",
               "## Annual insurer results", "",
               f"Amounts are euros per {config['vehicles']:,}-vehicle fleet year. MC SE is shown for each tail measure. "
               "Mean MC SE, analytic mean/SD, and all sensitivity rows are also exported to `simulation_insurer.csv`.", ""]
-    risk_columns = {"scenario": "Scenario", "limit_mode": "Limit", "design": "Design", "mean": "Mean", "sd": "SD",
+    risk_columns = {"scenario": "Scenario", "design": "Design", "mean": "Mean", "sd": "SD",
                     "var95": "VaR95", "var95_mcse": "SE", "var99": "VaR99", "var99_mcse": "SE ",
                     "tvar99": "TVaR99", "tvar99_mcse": "SE  "}
     lines += _markdown_table(main_cost, risk_columns)
     lines += ["", "A/B ratios and mean differences use paired years. A ratio above one favors B on TVaR99.", ""]
-    lines += _markdown_table(main_ratios, {"scenario": "Scenario", "limit_mode": "Limit", "tvar99_ratio_a_b": "TVaR A/B",
+    lines += _markdown_table(main_ratios, {"scenario": "Scenario", "tvar99_ratio_a_b": "TVaR A/B",
                                           "ratio_mcse": "Ratio MC SE", "ratio_ci95_low": "95% lower", "ratio_ci95_high": "95% upper",
                                           "mean_a_minus_b": "Mean A−B (€)", "mean_difference_mcse": "Paired mean SE (€)"})
     lines += ["", "![Mean and tail comparison](graphs/insurer_comparison.png)", "",
@@ -761,24 +707,24 @@ def _write_simulation_report(path: Path, result: SimulationResult) -> None:
               "## Retention and contract diagnostics", "",
               "Expected retention comes from model moments. Annual retention per vehicle includes zero-claim years. "
               "Retention share = expected retained loss / expected total proxy loss. Threshold probabilities are "
-              "per claim, separately for A and B; model and simulated probabilities are both shown. "
-              "A sample limit-hit rate of zero is not an assertion of zero theoretical probability.", ""]
-    retention_columns = {"scenario": "Scenario", "limit_mode": "Limit", "design": "Design",
+              "per claim, separately for A and B; model and simulated probabilities are both shown.", ""]
+    retention_columns = {"scenario": "Scenario", "design": "Design",
                          "expected_retention_per_claim": "Retention/claim (€)",
                          "expected_retention_annual_per_vehicle": "Retention/vehicle/year (€)",
                          "retention_share_of_losses": "Retention share", "expected_below_deductible": "Below d (model)",
-                         "mc_below_deductible": "Below d (MC)", "expected_at_limit": "At limit (model)", "mc_at_limit": "At limit (MC)"}
+                         "mc_below_deductible": "Below d (MC)"}
     lines += _markdown_table(main_retention, retention_columns)
     lines += ["", "Below-deductible proxy losses generate zero insurer payment and could go unreported in future insurer data. "
-              "Above-deductible payments are reduced by the insurer share; payments at the limit are capped, so larger "
-              "underlying losses cannot be recovered from the payment alone. Observed-data truncation/censoring is not repaired here.", "",
+              "Above-deductible payments grow with loss at the insurer's share. For a positive payment, the proxy loss "
+              "can be recovered as deductible + payment/share when the terms are known. "
+              "Truncation or censoring already present in the recorded training charges is not repaired here.", "",
               "## Sensitivity", "",
               f"Frequency grid: {config['frequency_grid']}; severity grid: {config['severity_grid']}. "
-              f"Each cell uses {config['years']:,} simulated years and both limit modes. "
+              f"Each cell uses {config['years']:,} simulated years for both designs. "
               "The contour interpolates between simulated cells; it does not add simulation points.", "",
               "![Sensitivity contour](graphs/sensitivity_contour.png)", "",
               "<details>", "<summary>All grid ratios and Monte Carlo uncertainty</summary>", ""]
-    lines += _markdown_table(result.ratios, {"limit_mode": "Limit", "frequency_multiplier": "Frequency ×", "severity_multiplier": "Severity ×",
+    lines += _markdown_table(result.ratios, {"frequency_multiplier": "Frequency ×", "severity_multiplier": "Severity ×",
                                             "tvar99_ratio_a_b": "TVaR A/B", "ratio_mcse": "MC SE", "ratio_ci95_low": "95% lower", "ratio_ci95_high": "95% upper"})
     lines += ["", "</details>", "", "<details>", "<summary>Full insurer summary at every scenario/grid point</summary>", ""]
     grid_risk_columns = {"frequency_multiplier": "Frequency ×", "severity_multiplier": "Severity ×",
@@ -797,8 +743,8 @@ def _write_simulation_report(path: Path, result: SimulationResult) -> None:
               "This follows the [negative-binomial parameterization](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.nbinom.html).", "",
               f"A PCG64 generator uses fixed seed {config['seed']} with independent count, severity, and thinning-mark streams. "
               f"Batches contain at most {config['batch_years']:,} years. Baseline claims are thinned by frequency multiplier "
-              "and severity amounts multiplied by the severity factor (constant severity CV). Both contracts and both limit "
-              "settings use exactly the same claims. Common streams are replayed across frequency settings; grid estimates are correlated.", "",
+              "and severity amounts multiplied by the severity factor (constant severity CV). Both contracts use exactly "
+              "the same claims. Common streams are replayed across frequency settings; grid estimates are correlated.", "",
               "VaR uses the empirical inverse CDF. TVaR99 is `q99 + mean(max(S-q99,0))/0.01`, so it weights exactly the worst "
               "1% of probability mass, including ties. TVaR MC SE is the sample SD of its influence score divided by sqrt(years), "
               "which accounts for the estimated tail threshold. VaR MC SE uses local quantile spacings to estimate density. "
@@ -815,7 +761,7 @@ def _write_simulation_report(path: Path, result: SimulationResult) -> None:
               "- ADAS frequency ×0.60 and severity ×1.15 are specified scenario assumptions, not causal estimates fitted from these data. "
               "Uniform severity scaling does not model a change in the claim mix.", "",
               "Checks compare sampled annual count, proxy-loss, and insurer means with analytic compound-model expectations "
-              "using a six-MC-SE tolerance. Every simulated payment is checked against loss and limit bounds; an independent "
+              "using a six-MC-SE tolerance. Every simulated payment is checked to be between zero and the loss; an independent "
               "retention expression checks loss = payment + retention. Full results are in `simulation_checks.csv`.", ""]
     grouped = result.checks.groupby(["check", "status"]).size().reset_index(name="cases")
     lines += _markdown_table(grouped, {"check": "Check", "status": "Status", "cases": "Cases"})
@@ -847,9 +793,9 @@ def run_simulation(project_root: Path | str, settings: SimulationSettings | None
     amounts = claim["ClaimCharge"].to_numpy(dtype=float)
     frequency, frequency_table = fit_frequency(policy)
     severity, severity_table, candidates = fit_severity(amounts)
-    contracts, calibration = calibrate_contracts(policy, amounts, severity, spec, settings)
+    contracts, calibration = calibrate_contracts(policy, severity, spec, settings)
     progress(f"Selected {frequency.family}, annual rate {frequency.rate:.8f}; {severity.family} severity. "
-             f"Calibrated B share {contracts[1].share:.8f}; limit EUR {contracts[0].limit:,.0f}.")
+             f"Calibrated B share {contracts[1].share:.8f}.")
     insurer, retention, ratios, checks, distributions = simulate_scenarios(
         frequency, severity, contracts, settings, spec, progress
     )

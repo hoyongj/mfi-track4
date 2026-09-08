@@ -12,33 +12,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from track_4.simulation import (
     Contract, FrequencyModel, SeverityModel, SimulationSettings, _simulate_frequency_slice,
     calibrate_contracts, contract_moments, fit_frequency, fit_severity, insurer_payment,
-    load_training_data, paired_tvar_ratio, read_specification, risk_metrics,
+    load_training_data, paired_tvar_ratio, read_specification, risk_metrics, simulate_scenarios,
 )
 
 
 class SimulationTests(unittest.TestCase):
-    def test_payment_and_limit_apply_to_insurer_share(self):
-        contract = Contract("B", 250, .8, 1000)
-        np.testing.assert_array_equal(insurer_payment(np.array([0, 250, 500, 1500, 3000]), contract),
-                                      [0, 0, 200, 1000, 1000])
-        self.assertEqual(insurer_payment(np.array([100]), Contract("A", 0, 0, 10))[0], 0)
-        for args in (("A", -1, 1, 100), ("A", 0, 1.1, 100), ("A", 0, 1, 0)):
+    def test_payment_scales_with_losses_above_the_deductible(self):
+        contract = Contract("B", 250, .8)
+        np.testing.assert_array_equal(insurer_payment(np.array([0, 250, 500, 1500, 3000, 1_000_000]), contract),
+                                      [0, 0, 200, 1000, 2200, 799800])
+        self.assertEqual(insurer_payment(np.array([100]), Contract("A", 0, 0))[0], 0)
+        for args in (("A", -1, 1), ("A", 0, 1.1), ("A", 0, -.1)):
             with self.assertRaises(ValueError):
                 Contract(*args)
 
     def test_closed_form_payment_moments_against_integration(self):
         for severity in (SeverityModel("Gamma", 1.4, 1200), SeverityModel("Lognormal", .8, 900)):
-            for limit in (700., float("inf")):
-                contract = Contract("B", 250, .63, limit)
-                moments = contract_moments(severity, contract, 1.15)
-                dist = severity.distribution(1.15)
-                cap_point = contract.deductible + limit / contract.share
-                for order, field in ((1, "mean"), (2, "second_moment")):
-                    integral = integrate.quad(lambda x: (contract.share * (x - contract.deductible))**order * dist.pdf(x),
-                                              contract.deductible, cap_point, epsabs=1e-6)[0]
-                    if np.isfinite(limit):
-                        integral += limit**order * dist.sf(cap_point)
-                    self.assertAlmostEqual(moments[field] / integral, 1, places=7)
+            contract = Contract("B", 250, .63)
+            moments = contract_moments(severity, contract, 1.15)
+            dist = severity.distribution(1.15)
+            for order, field in ((1, "mean"), (2, "second_moment")):
+                integral = integrate.quad(lambda x: (contract.share * (x - contract.deductible))**order * dist.pdf(x),
+                                          contract.deductible, np.inf, epsabs=1e-6)[0]
+                self.assertAlmostEqual(moments[field] / integral, 1, places=7)
 
     def test_nb_fleet_scaling(self):
         model = FrequencyModel("Negative binomial", .1, .8)
@@ -62,17 +58,16 @@ class SimulationTests(unittest.TestCase):
         config = SimulationSettings(years=1000, vehicles=1, batch_years=250, severity_grid=(1., 1.15))
         model = FrequencyModel("Negative binomial", .1, .8)
         severity = SeverityModel("Gamma", 1.4, 1200)
-        contracts = [Contract("A", 100, .7, 500), Contract("B", 100, .7, 500)]
+        contracts = [Contract("A", 100, .7), Contract("B", 100, .7)]
         first = _simulate_frequency_slice(model, severity, contracts, 1., config)
         again = _simulate_frequency_slice(model, severity, contracts, 1., config)
         thin = _simulate_frequency_slice(model, severity, contracts, .6, config)
         np.testing.assert_array_equal(first[0], again[0])
-        np.testing.assert_array_equal(first[0][:, :, 0], first[0][:, :, 1])
+        np.testing.assert_array_equal(first[0][:, 0], first[0][:, 1])
         self.assertTrue(np.all(thin[2] <= first[2]))
         self.assertTrue(np.all(thin[0] <= first[0] + 1e-8))
         self.assertTrue(np.any(first[2] == 0))
         self.assertTrue(np.all(first[0][..., first[2] == 0] == 0))
-        self.assertTrue(np.all(first[0][:, 0] <= first[0][:, 1]))
         self.assertTrue(np.all(first[0][1] >= first[0][0]))
         self.assertLess(first[-1], 1e-10)
 
@@ -85,13 +80,29 @@ class SimulationTests(unittest.TestCase):
         severity, severities, _ = fit_severity(claim["ClaimCharge"].to_numpy(dtype=float))
         self.assertEqual(frequencies["selected"].sum(), 1)
         self.assertEqual(severities["selected"].sum(), 1)
-        contracts, calibration = calibrate_contracts(policy, claim["ClaimCharge"].to_numpy(dtype=float),
-                                                      severity, read_specification(root / "spec.qmd"), SimulationSettings())
+        contracts, calibration = calibrate_contracts(policy, severity, read_specification(root / "spec.qmd"),
+                                                      SimulationSettings())
         self.assertLess(abs(calibration["relative_gap"]), 1e-8)
         self.assertEqual(contracts[0].deductible, 1000)
         self.assertEqual(contracts[1].deductible, 250)
         self.assertTrue(0 < contracts[1].share < 1)
         self.assertGreater(frequency.rate, 0)
+
+    def test_one_result_per_design_and_scenario(self):
+        config = SimulationSettings(years=1000, vehicles=100, frequency_grid=(.6, 1.), severity_grid=(1., 1.15))
+        outputs = simulate_scenarios(
+            FrequencyModel("Negative binomial", .1, .8), SeverityModel("Gamma", 1.4, 1200),
+            [Contract("A", 1000, 1), Contract("B", 250, .6)], config,
+            {"adas_frequency": .6, "adas_severity": 1.15}, progress=lambda _: None,
+        )
+        insurer, retention, ratios, _, distributions = outputs
+        key = ["frequency_multiplier", "severity_multiplier"]
+        for frame in (insurer, retention):
+            self.assertEqual(len(frame), 8)
+            self.assertFalse(frame.duplicated(key + ["design"]).any())
+        self.assertEqual(len(ratios), 4)
+        self.assertFalse(ratios.duplicated(key).any())
+        self.assertEqual(set(distributions), {(s, d) for s in ("Baseline", "ADAS") for d in ("A", "B")})
 
     def test_invalid_cleaned_counts_and_exposures_are_rejected(self):
         root = Path(__file__).resolve().parents[1]

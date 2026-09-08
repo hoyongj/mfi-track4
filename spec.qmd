@@ -73,8 +73,6 @@ Nobody needs to reread the whole document. These are the substantive changes.
   documentation defines `Exposure` as period length over 365, so the pipeline check is
   right and the data does not match its own documentation. We keep the supplied column
   regardless.
-- **`SumInsured` is a banded category, not a number**, so $L$ takes a band edge rather
-  than a value read off the field.
 - **The train-only categorical levels are confirmed harmless**: train is the superset,
   and we use no covariates.
 
@@ -88,8 +86,6 @@ Nobody needs to reread the whole document. These are the substantive changes.
   the same HLDI source, so both multipliers now come from the coverage that matches
   our data.
 - **Portfolio size fixed at 1,000 vehicles.**
-- **Per-claim limit $L$ now has a source and a robustness test**, after Xiaoxiao's
-  review.
 - **Simulation code corrected, and a Python translation note added.** Both negative
   binomial parameters scale with portfolio size. In `scipy.stats.nbinom` terms, only
   $n$ scales and $p$ does not.
@@ -157,7 +153,7 @@ decision below, and it should be credited on the reference slide.
 We use the 2016 Pricing Game tables from the `CASdatasets` package. Three reasons.
 
 **Highest coverage of the variables we need**, at 12 of 18. It is the only candidate
-that carries deductible and sum-insured information alongside claim-level amounts,
+that carries deductible information alongside claim-level amounts,
 which lets us check that our chosen contract terms sit in a plausible range rather
 than being invented.
 
@@ -176,7 +172,7 @@ severity distribution and to apply a per-claim deductible.
 It was the initial suggestion and it is wrong for this question. It is the best-known
 teaching dataset in this area, which is exactly why it was suggested, but familiarity
 is not fitness. Third-party liability severities include bodily injury, and the public
-files carry no deductible or limit information at all. Qiwei's inventory caught this;
+files carry no deductible information at all. Qiwei's inventory caught this;
 we are following the evidence rather than the default.
 
 ### Loading
@@ -364,7 +360,7 @@ Status: **fixed as a limitation**. This is the most important assumption in the 
 and it belongs on a slide.
 
 Qiwei's matrix has a column labelled GU: verified ground-up repair cost, before any
-deductible, coinsurance or limit is applied.
+deductible or coinsurance is applied.
 
 **That column is zero for all six candidates.** No public dataset in the inventory
 publishes a verified ground-up loss.
@@ -599,16 +595,15 @@ Status: **fixed in structure, parameters open pending calibration**.
 
 Insurer payment on a ground-up loss $X$:
 
-$$Y = \min\big(\alpha (X - d)_+,\; L\big)$$
+$$Y = \alpha (X - d)_+$$
 
-where $d$ is the deductible, $\alpha$ the insurer's share above the deductible, and $L$
-the per-claim limit.
+where $d$ is the deductible and $\alpha$ the insurer's share above the deductible.
+This payment rule applies to every simulation and sensitivity analysis.
 
 | | Design A: high deductible | Design B: coinsurance |
 |---|---|---|
 | Deductible $d$ | 1,000 | 250 |
 | Insurer share $\alpha$ | 1.00 | 0.80 |
-| Per-claim limit $L$ | from a `SumInsured` band edge | same value |
 
 ### Portfolio size
 
@@ -620,45 +615,19 @@ between the two designs disappears into rounding. A thousand-vehicle commercial 
 account keeps the tail a tail, and it matches the framing of the central question.
 State the number on the slide.
 
-### The per-claim limit
+### Deductible choices
 
-Status: **fixed**. Raised by Xiaoxiao on 6 September.
-
-$L$ previously read "same" in both columns, which is not a value.
-
-**`SumInsured` is a banded category, not a number.** The validation lists levels such
-as `<=7.6 Keur`, so it cannot supply a precise $L$. It can still anchor one: take the
-upper edge of a high band as the limit and say that is where it came from, which is
-better than inventing a round figure. Fall back to the 99.5th percentile of the cleaned
-claim amounts if the bands turn out unusable, and say which you used. `Deduc` is
-banded the same way and is worth checking for a different reason: it tells us whether
-$d = 1{,}000$ and $d = 250$ sit inside the range of deductibles the portfolio actually
-sold, which is the check this dataset was chosen to make possible.
-
-$L$ caps the **insurer payment**, not the ground-up loss, which matters because
-$\alpha \neq 1$ in Design B.
-
-**A common $L$ is not a common effect.** Design A reaches the cap at a ground-up loss
-of $L + 1{,}000$; Design B reaches it at $1.25L + 250$. A hits the ceiling at a
-*smaller* loss, so A's tail is truncated first and A can look better on TVaR for a
-reason that has nothing to do with risk sharing. This runs against the structural
-expectation described below, so it has to be tested rather than assumed away.
-
-Two things settle it:
-
-1. Report the share of claims hitting the limit under each design. This is already in
-   the required outputs but was not being read as a diagnostic.
-2. **Run the whole comparison a second time with no limit at all.** If the ranking is
-   unchanged with and without, one line on the slide closes the question. If it
-   changes, that is the finding and we present it as such.
+`Deduc` records monetary bands that provide context for the starting deductibles.
+The 250-euro deductible falls in the 201–300-euro band; 1,000 euros is compatible
+with the open >600-euro band, which does not identify an exact sold deductible.
 
 ### What we expect to find, and why we say so in advance
 
 A deductible subtracts a fixed amount, so its relief becomes negligible as losses grow.
 Coinsurance is proportional, so it keeps clipping the same share however far into the
 tail you go. At equal expected cost, Design B should therefore show the lower
-$\mathrm{TVaR}_{99}$ for any right-skewed severity. Only a binding limit changes that,
-which is what the test above is for.
+$\mathrm{TVaR}_{99}$ under the fitted right-skewed severity model. We test this
+expectation across the specified scenarios.
 
 This is a mechanism we can explain at a whiteboard, not a discovery. Present it that
 way. It also means the sensitivity contour may not flip anywhere in the grid: check
@@ -688,19 +657,19 @@ code block had exactly that error.
 
 ```{r}
 #| label: payment
-insurer_payment <- function(x, d, alpha, limit) {
-  pmin(alpha * pmax(x - d, 0), limit)
+insurer_payment <- function(x, d, alpha) {
+  alpha * pmax(x - d, 0)
 }
 
 # rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),
 # so switching the fitted severity family is a one-line change.
 simulate_aggregate <- function(n_sims, n_veh, mu_veh, theta_veh,
-                               rsev, d, alpha, limit = Inf) {
+                               rsev, d, alpha) {
   N   <- rnbinom(n_sims, mu = n_veh * mu_veh, size = n_veh * theta_veh)
   tot <- sum(N)
   agg <- numeric(n_sims)
   if (tot > 0) {
-    y   <- insurer_payment(rsev(tot), d, alpha, limit)
+    y   <- insurer_payment(rsev(tot), d, alpha)
     idx <- rep.int(seq_len(n_sims), N)
     s   <- tapply(y, idx, sum)
     agg[as.integer(names(s))] <- s     # sims with zero claims stay at 0
@@ -744,7 +713,6 @@ Status: **fixed**. Every item below appears either on a slide or in the appendix
 **Truncation and censoring diagnostics** (required by the Track 4 brief):
 
 - Share of claims falling entirely below the deductible under each design
-- Share of claims hitting the limit, **reported separately for each design**
 - Rows dropped in cleaning: how many zero, how many negative
 - How each design changes what the insurer would observe in future data
 
@@ -753,8 +721,6 @@ Status: **fixed**. Every item below appears either on a slide or in the appendix
 - Contour over the $(\phi_N, \phi_X)$ grid. Plot the ratio
   $\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)$ rather than a binary preference unless
   the coarse check shows the preference actually flips somewhere in the grid.
-- **Unlimited run.** The full comparison repeated with $L = \infty$, to show the
-  ranking is not an artefact of the common limit.
 
 Keep every figure legible from the back of a room. Two well-labelled charts beat six
 crowded ones, and the deck is capped at 20 slides including cover and figures.
@@ -828,8 +794,7 @@ mainly the frequency and severity distributions and the tail measures, and to ad
 anything the limitations register is missing from a practitioner's point of view. This
 sits alongside presentation section 5 rather than on top of it.
 
-Her 6 September review produced the per-claim limit test now written into the contract
-designs section, and the assumptions split above. Both are adopted.
+Her 6 September review produced the assumptions split above, which is adopted.
 
 ### Where things live
 

@@ -2385,7 +2385,7 @@ window.Quarto = {
   <li><a href="#contract-designs" id="toc-contract-designs" class="nav-link" data-scroll-target="#contract-designs"><span class="header-section-number">7</span> Contract designs</a>
   <ul class="collapse">
   <li><a href="#portfolio-size" id="toc-portfolio-size" class="nav-link" data-scroll-target="#portfolio-size"><span class="header-section-number">7.1</span> Portfolio size</a></li>
-  <li><a href="#the-per-claim-limit" id="toc-the-per-claim-limit" class="nav-link" data-scroll-target="#the-per-claim-limit"><span class="header-section-number">7.2</span> The per-claim limit</a></li>
+  <li><a href="#deductible-choices" id="toc-deductible-choices" class="nav-link" data-scroll-target="#deductible-choices"><span class="header-section-number">7.2</span> Deductible choices</a></li>
   <li><a href="#what-we-expect-to-find-and-why-we-say-so-in-advance" id="toc-what-we-expect-to-find-and-why-we-say-so-in-advance" class="nav-link" data-scroll-target="#what-we-expect-to-find-and-why-we-say-so-in-advance"><span class="header-section-number">7.3</span> What we expect to find, and why we say so in advance</a></li>
   <li><a href="#the-calibration-that-makes-the-comparison-fair" id="toc-the-calibration-that-makes-the-comparison-fair" class="nav-link" data-scroll-target="#the-calibration-that-makes-the-comparison-fair"><span class="header-section-number">7.4</span> The calibration that makes the comparison fair</a></li>
   </ul></li>
@@ -2455,7 +2455,6 @@ window.Quarto = {
 <li><strong>There is no accident date in the data.</strong> The claim table’s dates are the policy period copied across, matching at 100%.</li>
 <li><strong>The supplied <code>ClaimNb</code> column must not be used</strong> after cleaning. It reconciles to the uncleaned 4,568. Rebuild counts from the cleaned claim table.</li>
 <li><strong>The exposure mismatch has a likely explanation.</strong> Supplied <code>Exposure</code> looks like vehicle-years, <code>VehiclNb</code> times period length, rounded to 2dp. The validation check omits <code>VehiclNb</code>, which is why it fires on 82,435 rows. Not yet verified; one line in the spec settles it.</li>
-<li><strong><code>SumInsured</code> is a banded category, not a number</strong>, so <span class="math inline">\(L\)</span> takes a band edge rather than a value read off the field.</li>
 <li><strong>The train-only categorical levels are confirmed harmless</strong>: train is the superset, and we use no covariates.</li>
 </ul>
 <p><strong>Decisions and corrections:</strong></p>
@@ -2465,7 +2464,6 @@ window.Quarto = {
 <li><strong>A policy row is a covered vehicle over a period, not a policy.</strong> Do not merge or split. The claim table is already one row per accident; do not aggregate it.</li>
 <li><strong>Severity multiplier changed from 1.10 to 1.15.</strong> The PDL severity figure exists in the same HLDI source, so both multipliers now come from the coverage that matches our data.</li>
 <li><strong>Portfolio size fixed at 1,000 vehicles.</strong></li>
-<li><strong>Per-claim limit <span class="math inline">\(L\)</span> now has a source and a robustness test</strong>, after Xiaoxiao’s review.</li>
 <li><strong>Simulation code corrected, and a Python translation note added.</strong> Both negative binomial parameters scale with portfolio size. In <code>scipy.stats.nbinom</code> terms, only <span class="math inline">\(n\)</span> scales and <span class="math inline">\(p\)</span> does not.</li>
 <li><strong>Three slides each, not four.</strong> Four each did not fit the 20-slide cap.</li>
 <li><strong>Assumptions split from limitations</strong> between presentation sections 2 and 5.</li>
@@ -2572,13 +2570,13 @@ window.Quarto = {
 <section id="selection-pg16trainpol-and-pg16trainclaim" class="level3" data-number="3.1">
 <h3 data-number="3.1" class="anchored" data-anchor-id="selection-pg16trainpol-and-pg16trainclaim"><span class="header-section-number">3.1</span> Selection: <code>pg16trainpol</code> and <code>pg16trainclaim</code></h3>
 <p>We use the 2016 Pricing Game tables from the <code>CASdatasets</code> package. Three reasons.</p>
-<p><strong>Highest coverage of the variables we need</strong>, at 12 of 18. It is the only candidate that carries deductible and sum-insured information alongside claim-level amounts, which lets us check that our chosen contract terms sit in a plausible range rather than being invented.</p>
+<p><strong>Highest coverage of the variables we need</strong>, at 12 of 18. It is the only candidate that carries deductible information alongside claim-level amounts, which lets us check that our chosen contract terms sit in a plausible range rather than being invented.</p>
 <p><strong>Material damage only, bodily injury excluded.</strong> This matters more than the score. Our question is about repair costs. A severity distribution that mixes vehicle damage with bodily injury is a mixture of two very different processes, and fitting a single parametric family to it would be hard to defend. Excluding injury gives us a cleaner repair-cost distribution.</p>
 <p><strong>Claim-level amounts, not aggregates.</strong> Four of the six candidates report losses aggregated over a policy period or a year. We need individual claim amounts to fit a severity distribution and to apply a per-claim deductible.</p>
 </section>
 <section id="why-not-fremtpl2" class="level3" data-number="3.2">
 <h3 data-number="3.2" class="anchored" data-anchor-id="why-not-fremtpl2"><span class="header-section-number">3.2</span> Why not freMTPL2</h3>
-<p>It was the initial suggestion and it is wrong for this question. It is the best-known teaching dataset in this area, which is exactly why it was suggested, but familiarity is not fitness. Third-party liability severities include bodily injury, and the public files carry no deductible or limit information at all. Qiwei’s inventory caught this; we are following the evidence rather than the default.</p>
+<p>It was the initial suggestion and it is wrong for this question. It is the best-known teaching dataset in this area, which is exactly why it was suggested, but familiarity is not fitness. Third-party liability severities include bodily injury, and the public files carry no deductible information at all. Qiwei’s inventory caught this; we are following the evidence rather than the default.</p>
 </section>
 <section id="loading" class="level3" data-number="3.3">
 <h3 data-number="3.3" class="anchored" data-anchor-id="loading"><span class="header-section-number">3.3</span> Loading</h3>
@@ -2690,7 +2688,7 @@ window.Quarto = {
 <section id="the-ground-up-gap" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="the-ground-up-gap"><span class="header-section-number">4</span> The ground-up gap</h2>
 <p>Status: <strong>fixed as a limitation</strong>. This is the most important assumption in the project and it belongs on a slide.</p>
-<p>Qiwei’s matrix has a column labelled GU: verified ground-up repair cost, before any deductible, coinsurance or limit is applied.</p>
+<p>Qiwei’s matrix has a column labelled GU: verified ground-up repair cost, before any deductible or coinsurance is applied.</p>
 <p><strong>That column is zero for all six candidates.</strong> No public dataset in the inventory publishes a verified ground-up loss.</p>
 <p>This is not a reason to keep searching. It is a structural property of insurance data. An insurer only observes losses that were reported to it, and a policyholder has no reason to report a loss smaller than their deductible. The data are therefore already <strong>left-truncated</strong> at an unknown threshold, and any distribution fitted to them is a conditional distribution dressed up as an unconditional one.</p>
 <p>The consequence for us is specific and quantifiable:</p>
@@ -2839,8 +2837,8 @@ window.Quarto = {
 <h2 data-number="7" class="anchored" data-anchor-id="contract-designs"><span class="header-section-number">7</span> Contract designs</h2>
 <p>Status: <strong>fixed in structure, parameters open pending calibration</strong>.</p>
 <p>Insurer payment on a ground-up loss <span class="math inline">\(X\)</span>:</p>
-<p><span class="math display">\[Y = \min\big(\alpha (X - d)_+,\; L\big)\]</span></p>
-<p>where <span class="math inline">\(d\)</span> is the deductible, <span class="math inline">\(\alpha\)</span> the insurer’s share above the deductible, and <span class="math inline">\(L\)</span> the per-claim limit.</p>
+<p><span class="math display">\[Y = \alpha (X - d)_+\]</span></p>
+<p>where <span class="math inline">\(d\)</span> is the deductible and <span class="math inline">\(\alpha\)</span> the insurer’s share above the deductible. This payment rule applies to every simulation and sensitivity analysis.</p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -2860,11 +2858,6 @@ window.Quarto = {
 <td>1.00</td>
 <td>0.80</td>
 </tr>
-<tr class="odd">
-<td>Per-claim limit <span class="math inline">\(L\)</span></td>
-<td>from a <code>SumInsured</code> band edge</td>
-<td>same value</td>
-</tr>
 </tbody>
 </table>
 <section id="portfolio-size" class="level3" data-number="7.1">
@@ -2872,22 +2865,13 @@ window.Quarto = {
 <p>Status: <strong>fixed</strong>. Simulate a fleet of <strong>1,000 vehicles</strong>, not the full 87,228 rows.</p>
 <p>This was previously unspecified and it is not a detail. At full portfolio size the aggregate diversifies, <span class="math inline">\(\mathrm{TVaR}_{99}/E[S]\)</span> sits close to 1, and the difference between the two designs disappears into rounding. A thousand-vehicle commercial fleet account keeps the tail a tail, and it matches the framing of the central question. State the number on the slide.</p>
 </section>
-<section id="the-per-claim-limit" class="level3" data-number="7.2">
-<h3 data-number="7.2" class="anchored" data-anchor-id="the-per-claim-limit"><span class="header-section-number">7.2</span> The per-claim limit</h3>
-<p>Status: <strong>fixed</strong>. Raised by Xiaoxiao on 6 September.</p>
-<p><span class="math inline">\(L\)</span> previously read “same” in both columns, which is not a value.</p>
-<p><strong><code>SumInsured</code> is a banded category, not a number.</strong> The validation lists levels such as <code>&lt;=7.6 Keur</code>, so it cannot supply a precise <span class="math inline">\(L\)</span>. It can still anchor one: take the upper edge of a high band as the limit and say that is where it came from, which is better than inventing a round figure. Fall back to the 99.5th percentile of the cleaned claim amounts if the bands turn out unusable, and say which you used. <code>Deduc</code> is banded the same way and is worth checking for a different reason: it tells us whether <span class="math inline">\(d = 1{,}000\)</span> and <span class="math inline">\(d = 250\)</span> sit inside the range of deductibles the portfolio actually sold, which is the check this dataset was chosen to make possible.</p>
-<p><span class="math inline">\(L\)</span> caps the <strong>insurer payment</strong>, not the ground-up loss, which matters because <span class="math inline">\(\alpha \neq 1\)</span> in Design B.</p>
-<p><strong>A common <span class="math inline">\(L\)</span> is not a common effect.</strong> Design A reaches the cap at a ground-up loss of <span class="math inline">\(L + 1{,}000\)</span>; Design B reaches it at <span class="math inline">\(1.25L + 250\)</span>. A hits the ceiling at a <em>smaller</em> loss, so A’s tail is truncated first and A can look better on TVaR for a reason that has nothing to do with risk sharing. This runs against the structural expectation described below, so it has to be tested rather than assumed away.</p>
-<p>Two things settle it:</p>
-<ol type="1">
-<li>Report the share of claims hitting the limit under each design. This is already in the required outputs but was not being read as a diagnostic.</li>
-<li><strong>Run the whole comparison a second time with no limit at all.</strong> If the ranking is unchanged with and without, one line on the slide closes the question. If it changes, that is the finding and we present it as such.</li>
-</ol>
+<section id="deductible-choices" class="level3" data-number="7.2">
+<h3 data-number="7.2" class="anchored" data-anchor-id="deductible-choices"><span class="header-section-number">7.2</span> Deductible choices</h3>
+<p><code>Deduc</code> records monetary bands that provide context for the starting deductibles. The 250-euro deductible falls in the 201–300-euro band; 1,000 euros is compatible with the open &gt;600-euro band, which does not identify an exact sold deductible.</p>
 </section>
 <section id="what-we-expect-to-find-and-why-we-say-so-in-advance" class="level3" data-number="7.3">
 <h3 data-number="7.3" class="anchored" data-anchor-id="what-we-expect-to-find-and-why-we-say-so-in-advance"><span class="header-section-number">7.3</span> What we expect to find, and why we say so in advance</h3>
-<p>A deductible subtracts a fixed amount, so its relief becomes negligible as losses grow. Coinsurance is proportional, so it keeps clipping the same share however far into the tail you go. At equal expected cost, Design B should therefore show the lower <span class="math inline">\(\mathrm{TVaR}_{99}\)</span> for any right-skewed severity. Only a binding limit changes that, which is what the test above is for.</p>
+<p>A deductible subtracts a fixed amount, so its relief becomes negligible as losses grow. Coinsurance is proportional, so it keeps clipping the same share however far into the tail you go. At equal expected cost, Design B should therefore show the lower <span class="math inline">\(\mathrm{TVaR}_{99}\)</span> under the fitted right-skewed severity model. We test this expectation across the specified scenarios.</p>
 <p>This is a mechanism we can explain at a whiteboard, not a discovery. Present it that way. It also means the sensitivity contour may not flip anywhere in the grid: check that on a coarse 4x4 run before building the slide, and if there is no flip, plot the ratio <span class="math inline">\(\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)\)</span>, which varies, instead of a binary preference, which would be one solid colour.</p>
 </section>
 <section id="the-calibration-that-makes-the-comparison-fair" class="level3" data-number="7.4">
@@ -2899,19 +2883,19 @@ window.Quarto = {
 <div class="cell">
 <details open class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha, limit) {</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmin</span>(alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>), limit)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>insurer_payment <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d, alpha) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  alpha <span class="sc">*</span> <span class="fu">pmax</span>(x <span class="sc">-</span> d, <span class="dv">0</span>)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rsev is a closure, e.g. function(k) rlnorm(k, ml, sdl) or rgamma(k, shape, rate),</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># so switching the fitted severity family is a one-line change.</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>simulate_aggregate <span class="ot">&lt;-</span> <span class="cf">function</span>(n_sims, n_veh, mu_veh, theta_veh,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                               rsev, d, alpha, <span class="at">limit =</span> <span class="cn">Inf</span>) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                               rsev, d, alpha) {</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  N   <span class="ot">&lt;-</span> <span class="fu">rnbinom</span>(n_sims, <span class="at">mu =</span> n_veh <span class="sc">*</span> mu_veh, <span class="at">size =</span> n_veh <span class="sc">*</span> theta_veh)</span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  tot <span class="ot">&lt;-</span> <span class="fu">sum</span>(N)</span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  agg <span class="ot">&lt;-</span> <span class="fu">numeric</span>(n_sims)</span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (tot <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    y   <span class="ot">&lt;-</span> <span class="fu">insurer_payment</span>(<span class="fu">rsev</span>(tot), d, alpha, limit)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    y   <span class="ot">&lt;-</span> <span class="fu">insurer_payment</span>(<span class="fu">rsev</span>(tot), d, alpha)</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">rep.int</span>(<span class="fu">seq_len</span>(n_sims), N)</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    s   <span class="ot">&lt;-</span> <span class="fu">tapply</span>(y, idx, sum)</span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    agg[<span class="fu">as.integer</span>(<span class="fu">names</span>(s))] <span class="ot">&lt;-</span> s     <span class="co"># sims with zero claims stay at 0</span></span>
@@ -2950,14 +2934,12 @@ window.Quarto = {
 <p><strong>Truncation and censoring diagnostics</strong> (required by the Track 4 brief):</p>
 <ul>
 <li>Share of claims falling entirely below the deductible under each design</li>
-<li>Share of claims hitting the limit, <strong>reported separately for each design</strong></li>
 <li>Rows dropped in cleaning: how many zero, how many negative</li>
 <li>How each design changes what the insurer would observe in future data</li>
 </ul>
 <p><strong>Sensitivity:</strong></p>
 <ul>
 <li>Contour over the <span class="math inline">\((\phi_N, \phi_X)\)</span> grid. Plot the ratio <span class="math inline">\(\mathrm{TVaR}_{99}(A)/\mathrm{TVaR}_{99}(B)\)</span> rather than a binary preference unless the coarse check shows the preference actually flips somewhere in the grid.</li>
-<li><strong>Unlimited run.</strong> The full comparison repeated with <span class="math inline">\(L = \infty\)</span>, to show the ranking is not an artefact of the common limit.</li>
 </ul>
 <p>Keep every figure legible from the back of a room. Two well-labelled charts beat six crowded ones, and the deck is capped at 20 slides including cover and figures.</p>
 <hr>
@@ -3026,7 +3008,7 @@ window.Quarto = {
 <section id="review" class="level3" data-number="9.3">
 <h3 data-number="9.3" class="anchored" data-anchor-id="review"><span class="header-section-number">9.3</span> Review</h3>
 <p>Xiaoxiao has hands-on P&amp;C experience and has agreed to review the modelling choices, mainly the frequency and severity distributions and the tail measures, and to add anything the limitations register is missing from a practitioner’s point of view. This sits alongside presentation section 5 rather than on top of it.</p>
-<p>Her 6 September review produced the per-claim limit test now written into the contract designs section, and the assumptions split above. Both are adopted.</p>
+<p>Her 6 September review produced the assumptions split above, which is adopted.</p>
 </section>
 <section id="where-things-live" class="level3" data-number="9.4">
 <h3 data-number="9.4" class="anchored" data-anchor-id="where-things-live"><span class="header-section-number">9.4</span> Where things live</h3>

@@ -1,7 +1,7 @@
 {
   "spec": {
     "path": "spec.qmd",
-    "sha256": "34ee82f27903e45100a63f51697abc653d2cea0942d548367b55dde6f58078ba",
+    "sha256": "2ed64bf5524b90f447f98fcfa69f8d08047348c5b535b19031d3cbbd88003aab",
     "deductibles": [
       1000.0,
       250.0
@@ -134,15 +134,6 @@
     }
   ],
   "calibration": {
-    "limit_source": "Highest finite upper edge among observed SumInsured bands",
-    "sum_insured_labels": [
-      "137-380 Keur",
-      "38-76 Keur",
-      "7.6-38 Keur",
-      "76-137 Keur",
-      "<=7.6 Keur",
-      "Unknown"
-    ],
     "deductible_labels": [
       "0 euro",
       "1-200 euros",
@@ -151,33 +142,28 @@
       "401-600 euros",
       ">600 euros"
     ],
-    "sum_insured_unknown_rows": 87093,
     "initial_terms": [
       {
         "name": "A",
         "deductible": 1000.0,
-        "share": 1.0,
-        "limit": 380000.0
+        "share": 1.0
       },
       {
         "name": "B",
         "deductible": 250.0,
-        "share": 0.8,
-        "limit": 380000.0
+        "share": 0.8
       }
     ],
     "final_terms": [
       {
         "name": "A",
         "deductible": 1000.0,
-        "share": 1.0,
-        "limit": 380000.0
+        "share": 1.0
       },
       {
         "name": "B",
         "deductible": 250.0,
-        "share": 0.6183120187953539,
-        "limit": 380000.0
+        "share": 0.6183120187953539
       }
     ],
     "adjusted_term": "Design B insurer share only",
@@ -206,5 +192,5 @@
     "aggregate_survival",
     "sensitivity_contour"
   ],
-  "elapsed_seconds": 83.6112734999042
+  "elapsed_seconds": 91.22314250003546
 }
